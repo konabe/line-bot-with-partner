@@ -25,6 +25,13 @@ REPO_URL="${REPO_URL%.git}"
 API_ENDPOINT="https://api.render.com/v1/services"
 AUTH_HEADER="Authorization: Bearer ${RENDER_API_KEY}"
 
+# DEBUG mode: set DEBUG=1 to enable curl verbose output and show the curl command
+if [ "${DEBUG:-0}" != "0" ]; then
+  CURL_OPTS="-v"
+else
+  CURL_OPTS="-sS"
+fi
+
 cat <<-EOF
 Will create Render service with the following settings:
   SERVICE_NAME: $SERVICE_NAME
@@ -67,7 +74,13 @@ fi
 echo "\nSending request to Render API..."
 # Use a temp file for body to safely separate http code
 TMPBODY=$(mktemp)
-HTTP_CODE=$(curl -sS -o "$TMPBODY" -w "%{http_code}" -X POST "$API_ENDPOINT" \
+if [ "${DEBUG:-0}" != "0" ]; then
+  echo "Running curl with options: $CURL_OPTS -X POST $API_ENDPOINT"
+  echo "Request body:" >&2
+  echo "$PAYLOAD" | sed -n '1,200p' >&2
+fi
+
+HTTP_CODE=$(curl $CURL_OPTS -o "$TMPBODY" -w "%{http_code}" -X POST "$API_ENDPOINT" \
   -H "$AUTH_HEADER" \
   -H "Content-Type: application/json" \
   -d "$PAYLOAD" ) || true
