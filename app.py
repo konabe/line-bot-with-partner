@@ -4,9 +4,10 @@ import logging
 import requests
 from flask import Flask, request, abort
 from dotenv import load_dotenv
-from linebot import LineBotApi, WebhookHandler
-from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.v3.messaging import MessagingApi
+from linebot.v3.webhook import WebhookHandler
+from linebot.v3.messaging.models import MessageEvent, TextMessage, TextSendMessage, FlexMessage
+from linebot.v3.exceptions import InvalidSignatureError
 import re
 from functools import lru_cache
 
@@ -19,7 +20,7 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
+messaging_api = MessagingApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
 
@@ -52,7 +53,11 @@ def handle_message(event):
         else:
             flex = create_pokemon_flex(info['name'], info['image_url'])
             reply = flex
-        line_bot_api.reply_message(event.reply_token, reply)
+        # FLEX Messageの場合
+        if hasattr(reply, 'alt_text'):
+            messaging_api.reply_message(event.reply_token, [reply])
+        else:
+            messaging_api.reply_message(event.reply_token, [TextSendMessage(text=reply)])
         return
 
     # じゃんけん絵文字判定
@@ -64,7 +69,7 @@ def handle_message(event):
         # 勝敗判定
         result = judge_janken(user_hand, bot_hand)
         reply = f"あなた: {user_hand}\nBot: {bot_hand}\n結果: {result}"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+    messaging_api.reply_message(event.reply_token, [TextSendMessage(text=reply)])
         return
 
 # pokeapiからランダムなポケモン名と画像URLを取得
@@ -131,7 +136,7 @@ def create_pokemon_flex(name, image_url):
             weather_text = get_hakata_weather_text()
         else:
             weather_text = get_location_weather_text(loc)
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=weather_text))
+    messaging_api.reply_message(event.reply_token, [TextSendMessage(text=weather_text)])
         return
 
     # コマンド以外は返信しない
