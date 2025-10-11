@@ -56,8 +56,8 @@ def handle_message(event):
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=weather_text))
         return
 
-    # fallback echo
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=text))
+    # コマンド以外は返信しない
+    return
 
 
 def get_hakata_weather_text():
