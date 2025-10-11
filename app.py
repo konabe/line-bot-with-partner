@@ -46,9 +46,13 @@ def handle_message(event):
     text = event.message.text
     # ポケモン名出力機能
     if text.strip() == 'ポケモン':
-        pokemon_name = get_random_pokemon_name()
-        reply = f"今日のポケモン: {pokemon_name}"
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        info = get_random_pokemon_info()
+        if info is None:
+            reply = TextSendMessage(text="ポケモン情報の取得に失敗しました")
+        else:
+            flex = create_pokemon_flex(info['name'], info['image_url'])
+            reply = flex
+        line_bot_api.reply_message(event.reply_token, reply)
         return
 
     # じゃんけん絵文字判定
@@ -62,21 +66,20 @@ def handle_message(event):
         reply = f"あなた: {user_hand}\nBot: {bot_hand}\n結果: {result}"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
-# pokeapiからランダムなポケモン名を取得
-def get_random_pokemon_name():
+
+# pokeapiからランダムなポケモン名と画像URLを取得
+def get_random_pokemon_info():
     import random
     import requests
     try:
-        # ポケモン総数を取得
         resp = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1')
         resp.raise_for_status()
-        # 総数はcountに入っている
         count = resp.json().get('count', 1000)
-        # 1〜countのランダムなID
         poke_id = random.randint(1, count)
         resp2 = requests.get(f'https://pokeapi.co/api/v2/pokemon/{poke_id}')
         resp2.raise_for_status()
         name = resp2.json().get('name', '不明')
+        image_url = resp2.json().get('sprites', {}).get('other', {}).get('official-artwork', {}).get('front_default')
         # 日本語名取得（speciesエンドポイント）
         species_url = resp2.json().get('species', {}).get('url')
         if species_url:
@@ -85,10 +88,39 @@ def get_random_pokemon_name():
             names = resp3.json().get('names', [])
             for n in names:
                 if n.get('language', {}).get('name') == 'ja':
-                    return n.get('name')
-        return name
+                    name = n.get('name')
+                    break
+        return {'name': name, 'image_url': image_url}
     except Exception:
-        return '取得失敗'
+        return None
+
+# FLEX Message生成
+from linebot.models import FlexSendMessage
+def create_pokemon_flex(name, image_url):
+    flex = {
+        "type": "bubble",
+        "hero": {
+            "type": "image",
+            "url": image_url or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png",
+            "size": "xl",
+            "aspectRatio": "1:1",
+            "aspectMode": "cover"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": name,
+                    "weight": "bold",
+                    "size": "xl",
+                    "align": "center"
+                }
+            ]
+        }
+    }
+    return FlexSendMessage(alt_text=f"今日のポケモン: {name}", contents=flex)
 
     # キーワード: 博多の天気 (ゆるいマッチ: 空白差異/末尾句読点などを考慮)
     normalized = text.strip().replace('　', ' ')
