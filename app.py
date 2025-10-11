@@ -75,6 +75,26 @@ def handle_message(event):
         )
         messaging_api.reply_message(reply_message_request)
         return
+    # ポケモンと送信された場合
+    if text.strip() == 'ポケモン':
+        logger.info("ポケモンリクエスト受信。ランダムポケモン情報を返信")
+        info = get_random_pokemon_info()
+        if info:
+            flex = create_pokemon_flex(info['name'], info['image_url'])
+            from linebot.v3.messaging.models import ReplyMessageRequest
+            reply_message_request = ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[flex]
+            )
+            messaging_api.reply_message(reply_message_request)
+        else:
+            from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+            reply_message_request = ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="ポケモン情報の取得に失敗しました。")]
+            )
+            messaging_api.reply_message(reply_message_request)
+        return
 # じゃんけんのpostbackイベントハンドラ
 from linebot.v3.webhooks.models.postback_event import PostbackEvent
 @handler.add(PostbackEvent)
