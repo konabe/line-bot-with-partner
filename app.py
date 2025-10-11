@@ -219,6 +219,32 @@ def handle_message(event):
         )
         safe_reply_message(reply_message_request)
         return
+    # 今日のご飯: ChatGPT におすすめを問い合わせて返信
+    if text.strip() == '今日のご飯':
+        logger.info("今日のご飯リクエストを受信: ChatGPT に問い合わせます")
+        try:
+            suggestion = get_chatgpt_meal_suggestion()
+        except Exception as e:
+            logger.error(f"get_chatgpt_meal_suggestion error: {e}")
+            suggestion = None
+        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+        if not suggestion:
+            # OpenAI API key 未設定など
+            msg = (
+                "申し訳ないです。おすすめを取得できませんでした。"
+                " 管理者に OPENAI_API_KEY の設定を確認してもらってください。"
+            )
+            reply_message_request = ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=msg)]
+            )
+        else:
+            reply_message_request = ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=suggestion)]
+            )
+        safe_reply_message(reply_message_request)
+        return
     # ポケモンと送信された場合
     if text.strip() == 'ポケモン':
         logger.info("ポケモンリクエスト受信。図鑑風情報を返信")
@@ -434,6 +460,48 @@ def get_random_pokemon_info():
     except Exception as e:
         logger.error(f"get_random_pokemon_info error: {e}")
         return None
+
+
+def get_chatgpt_meal_suggestion():
+    """Call OpenAI Chat Completions API to get a meal suggestion.
+
+    Returns a string with suggestions or raises if OPENAI_API_KEY is missing.
+    """
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
+        raise RuntimeError('OPENAI_API_KEY is not set')
+    # Prefer gpt-4 if available, fallback to gpt-3.5-turbo
+    model = os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo')
+    prompt = (
+        "あなたは親切な料理アドバイザーです。ユーザーに今すぐ作れる料理のおすすめを3つ、"
+        "簡単なレシピや調理時間（目安）と一言コメント付きで提案してください。日本語で答えてください。"
+    )
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}'
+    }
+    payload = {
+        'model': model,
+        'messages': [
+            {'role': 'system', 'content': 'あなたは家庭料理に詳しいアドバイザーです。'},
+            {'role': 'user', 'content': prompt}
+        ],
+        'max_tokens': 500,
+        'temperature': 0.8,
+    }
+    try:
+        resp = requests.post('https://api.openai.com/v1/chat/completions', json=payload, headers=headers, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        # extract assistant content
+        choices = data.get('choices') or []
+        if not choices:
+            raise RuntimeError('no choices from OpenAI')
+        content = choices[0].get('message', {}).get('content')
+        return content
+    except Exception as e:
+        logger.error(f"OpenAI API error: {e}")
+        raise
 
 # FLEX Message生成 (v3 FlexMessage を返す)
 def create_pokemon_flex(name, image_url):
