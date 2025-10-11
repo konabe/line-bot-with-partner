@@ -20,6 +20,31 @@ pytest -q
 ```
 
 Top-level shim modules were removed; tests and CI were adjusted to import from `src.*` directly. CI already sets `PYTHONPATH` before running tests.
+## Notes about removing top-level shim modules
+
+We removed several top-level shim files (for example `src/umigame.py`) to prefer direct imports from the new DDD layout (`src.domain.*`, `src.application.*`, `src.infrastructure.*`). If you remove a tracked shim file in future, follow these steps to avoid inconsistencies:
+
+- Use `git rm` to remove tracked files so the index is updated correctly:
+
+```bash
+git rm src/umigame.py
+git commit -m "Remove shim"
+git push origin <branch>
+```
+
+- Verify there are no remaining tracked shim files:
+
+```bash
+git ls-files 'src/*' | grep -E "(^src/umigame.py|^src/messaging.py|^src/openai_helpers.py)" || true
+```
+
+- Run tests the same way CI does:
+
+```bash
+PYTHONPATH=. pytest -q
+```
+
+If you'd like, I can add an automated CI check (`scripts/check-no-shims.sh`) or a `pre-commit` hook to enforce this policy.
 ## 起動通知機能 (Startup Notify)
 
 サーバー起動時に LINE (push) で起動完了メッセージを受け取りたい場合、以下の環境変数を設定します。
