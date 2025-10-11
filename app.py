@@ -44,9 +44,45 @@ def safe_reply_message(reply_message_request):
         logger.warning("messaging_api is not initialized; skipping reply_message")
         return
     try:
+        # log payload for debugging
+        try:
+            logger.debug(f"reply payload: {reply_message_request.to_dict()}")
+        except Exception:
+            logger.debug("reply payload: <unable to serialize>")
         messaging_api.reply_message(reply_message_request)
     except Exception as e:
         logger.error(f"Error when calling messaging_api.reply_message: {e}")
+
+
+@app.route('/debug/zukan', methods=['GET'])
+def debug_zukan():
+    """Return a sample zukan Flex payload for inspection.
+
+    Query params:
+      - name: override pokemon name
+      - image_url: override image url
+      - zukan_no: override number
+      - types: comma separated types
+      - evolution: override evolution string
+    """
+    name = request.args.get('name', 'ピカチュウ')
+    image_url = request.args.get('image_url', '')
+    zukan_no = request.args.get('zukan_no', '25')
+    types = request.args.get('types', 'electric').split(',') if request.args.get('types') else []
+    evolution = request.args.get('evolution', 'ピチュー → ピカチュウ → ライチュウ')
+    info = {
+        'zukan_no': zukan_no,
+        'name': name,
+        'image_url': image_url,
+        'types': types,
+        'evolution': evolution
+    }
+    flex = create_pokemon_zukan_flex(info)
+    # Return JSON representation
+    try:
+        return flex.to_json(), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    except Exception:
+        return {'error': 'unable to serialize flex'}, 500
 handler = WebhookHandler(CHANNEL_SECRET)
 
 
