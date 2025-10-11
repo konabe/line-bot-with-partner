@@ -6,7 +6,9 @@ from flask import Flask, request, abort
 from dotenv import load_dotenv
 from linebot.v3.messaging import MessagingApi
 from linebot.v3.webhook import WebhookHandler
-from linebot.v3.messaging.models import MessageEvent, TextMessage, TextSendMessage, FlexMessage
+from linebot.v3.webhooks.models.message_event import MessageEvent
+from linebot.v3.webhooks.models.text_message_content import TextMessageContent
+from linebot.v3.messaging.models import TextMessage, FlexMessage
 from linebot.v3.exceptions import InvalidSignatureError
 import re
 from functools import lru_cache
@@ -42,14 +44,14 @@ def callback():
     return 'OK', 200
 
 
-@handler.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     text = event.message.text
     # ポケモン名出力機能
     if text.strip() == 'ポケモン':
         info = get_random_pokemon_zukan_info()
         if info is None:
-            reply = TextSendMessage(text="ポケモン情報の取得に失敗しました")
+            reply = TextMessage(text="ポケモン情報の取得に失敗しました")
             messaging_api.reply_message(event.reply_token, [reply])
             return
         flex = create_pokemon_zukan_flex(info)
@@ -156,7 +158,7 @@ def create_pokemon_zukan_flex(info):
         # 勝敗判定
         result = judge_janken(user_hand, bot_hand)
         reply = f"あなた: {user_hand}\nBot: {bot_hand}\n結果: {result}"
-    messaging_api.reply_message(event.reply_token, [TextSendMessage(text=reply)])
+    messaging_api.reply_message(event.reply_token, [TextMessage(text=reply)])
     return
 
 # pokeapiからランダムなポケモン名と画像URLを取得
