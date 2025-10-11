@@ -193,8 +193,7 @@ def get_random_pokemon_zukan_info():
         logger.error(f"get_random_pokemon_zukan_info error: {e}")
         return None
 
-# 図鑑風FLEX Message生成
-from linebot.models import FlexSendMessage
+# 図鑑風FLEX Message生成 (v3 FlexMessage を返す)
 def create_pokemon_zukan_flex(info):
     type_text = ' / '.join(info['types']) if info['types'] else '不明'
     flex = {
@@ -232,7 +231,7 @@ def create_pokemon_zukan_flex(info):
             ]
         }
     }
-    return FlexSendMessage(alt_text=f"ポケモン図鑑: {info['name']}", contents=flex)
+    return FlexMessage(alt_text=f"ポケモン図鑑: {info['name']}", contents=flex)
 
     # じゃんけん絵文字判定
     JANKEN_EMOJIS = {'✊': 'グー', '✌️': 'チョキ', '✋': 'パー'}
@@ -276,8 +275,7 @@ def get_random_pokemon_info():
         logger.error(f"get_random_pokemon_info error: {e}")
         return None
 
-# FLEX Message生成
-from linebot.models import FlexSendMessage
+# FLEX Message生成 (v3 FlexMessage を返す)
 def create_pokemon_flex(name, image_url):
     flex = {
         "type": "bubble",
@@ -302,7 +300,7 @@ def create_pokemon_flex(name, image_url):
             ]
         }
     }
-    return FlexSendMessage(alt_text=f"今日のポケモン: {name}", contents=flex)
+    return FlexMessage(alt_text=f"今日のポケモン: {name}", contents=flex)
 
     # ...existing code...
 
