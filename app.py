@@ -314,7 +314,7 @@ def create_pokemon_zukan_flex(info):
     types_box = FlexBox(layout="baseline", contents=type_items)
 
     # Evolution info placed in footer for better visibility under image
-    from linebot.v3.messaging.models import FlexFooter
+    # FlexFooter is not available in this SDK; use FlexBox with FlexText instead
     evo = FlexText(text=f"進化: {evolution}", size="sm", color="#666666", align="center")
     footer = FlexBox(layout="vertical", contents=[
         types_box,
