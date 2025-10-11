@@ -1,4 +1,25 @@
+from app import judge_janken
+def test_judge_janken_draw():
+    # あいこ
+    assert judge_janken('✊', '✊') == 'あいこ'
+    assert judge_janken('✌️', '✌️') == 'あいこ'
+    assert judge_janken('✋', '✋') == 'あいこ'
+
+def test_judge_janken_win():
+    # 勝ち
+    assert judge_janken('✊', '✌️') == 'あなたの勝ち！'
+    assert judge_janken('✌️', '✋') == 'あなたの勝ち！'
+    assert judge_janken('✋', '✊') == 'あなたの勝ち！'
+
+def test_judge_janken_lose():
+    # 負け
+    assert judge_janken('✊', '✋') == 'あなたの負け…'
+    assert judge_janken('✌️', '✊') == 'あなたの負け…'
+    assert judge_janken('✋', '✌️') == 'あなたの負け…'
+
 import os
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import json
 from unittest.mock import patch
 import pytest
@@ -9,6 +30,7 @@ from app import (
     extract_location_from_weather_query,
     geocode_location,
     get_location_weather_text,
+    judge_janken
 )
 
 

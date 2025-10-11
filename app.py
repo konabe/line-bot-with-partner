@@ -44,6 +44,18 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     text = event.message.text
+    # じゃんけん絵文字判定
+    JANKEN_EMOJIS = {'✊': 'グー', '✌️': 'チョキ', '✋': 'パー'}
+    if text in JANKEN_EMOJIS:
+        import random
+        bot_hand = random.choice(list(JANKEN_EMOJIS.keys()))
+        user_hand = text
+        # 勝敗判定
+        result = judge_janken(user_hand, bot_hand)
+        reply = f"あなた: {user_hand}\nBot: {bot_hand}\n結果: {result}"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
+
     # キーワード: 博多の天気 (ゆるいマッチ: 空白差異/末尾句読点などを考慮)
     normalized = text.strip().replace('　', ' ')
     # 汎用『◯◯の天気』対応
@@ -58,6 +70,15 @@ def handle_message(event):
 
     # コマンド以外は返信しない
     return
+
+# じゃんけん判定関数
+def judge_janken(user, bot):
+    if user == bot:
+        return 'あいこ'
+    if (user, bot) in [('✊', '✌️'), ('✌️', '✋'), ('✋', '✊')]:
+        return 'あなたの勝ち！'
+    else:
+        return 'あなたの負け…'
 
 
 def get_hakata_weather_text():
