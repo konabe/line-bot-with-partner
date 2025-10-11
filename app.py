@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from linebot.v3.messaging import MessagingApi
 from linebot.v3.messaging.api_client import ApiClient
 from linebot.v3.messaging.configuration import Configuration
+from messaging import init_messaging_api, safe_reply_message, safe_push_message
 from linebot.v3.webhook import WebhookHandler
 from linebot.v3.webhooks.models.message_event import MessageEvent
 from linebot.v3.webhooks.models.text_message_content import TextMessageContent
@@ -30,51 +31,9 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger = logging.getLogger(__name__)
 
-# Initialize MessagingApi with ApiClient and Configuration
-try:
-    _config = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
-    _api_client = ApiClient(configuration=_config)
-    messaging_api = MessagingApi(_api_client)
-except Exception as e:
-    # Fallback: if initialization fails, keep a placeholder and log later
-    messaging_api = None
-    logger.error(f"Failed to initialize MessagingApi: {e}")
+init_messaging_api(CHANNEL_ACCESS_TOKEN)
 
 # (UMIGAME_STATE is provided by umigame.py)
-
-
-def safe_reply_message(reply_message_request):
-    """Wrapper to call messaging_api.reply_message safely.
-
-    If messaging_api is not initialized, log and skip instead of raising.
-    """
-    if messaging_api is None:
-        logger.warning("messaging_api is not initialized; skipping reply_message")
-        return
-    try:
-        # log payload for debugging
-        try:
-            logger.debug(f"reply payload: {reply_message_request.to_dict()}")
-        except Exception:
-            logger.debug("reply payload: <unable to serialize>")
-        messaging_api.reply_message(reply_message_request)
-    except Exception as e:
-        logger.error(f"Error when calling messaging_api.reply_message: {e}")
-
-
-def safe_push_message(push_message_request):
-    """Wrapper to call messaging_api.push_message safely."""
-    if messaging_api is None:
-        logger.warning("messaging_api is not initialized; skipping push_message")
-        return
-    try:
-        try:
-            logger.debug(f"push payload: {push_message_request.to_dict()}")
-        except Exception:
-            logger.debug("push payload: <unable to serialize>")
-        messaging_api.push_message(push_message_request)
-    except Exception as e:
-        logger.error(f"Error when calling messaging_api.push_message: {e}")
 
 
 @app.route('/debug/zukan', methods=['GET'])
