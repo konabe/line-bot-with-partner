@@ -61,7 +61,12 @@ def handle_message(event):
                 ]
             )
         )
-        messaging_api.reply_message(event.reply_token, [template])
+        from linebot.v3.messaging.models import ReplyMessageRequest
+        reply_message_request = ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[template]
+        )
+        messaging_api.reply_message(reply_message_request)
         return
 # じゃんけんのpostbackイベントハンドラ
 from linebot.v3.webhooks.models.postback_event import PostbackEvent
@@ -75,17 +80,12 @@ def handle_postback(event):
         bot_hand = random.choice(list(JANKEN_EMOJIS.keys()))
         result = judge_janken(user_hand, bot_hand)
         reply = f"あなた: {user_hand}\nBot: {bot_hand}\n結果: {result}"
-        messaging_api.reply_message(event.reply_token, [TextMessage(text=reply)])
-    # ポケモン名出力機能
-    if text.strip() == 'ポケモン':
-        info = get_random_pokemon_zukan_info()
-        if info is None:
-            reply = TextMessage(text="ポケモン情報の取得に失敗しました")
-            messaging_api.reply_message(event.reply_token, [reply])
-            return
-        flex = create_pokemon_zukan_flex(info)
-        messaging_api.reply_message(event.reply_token, [flex])
-        return
+        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+        reply_message_request = ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessage(text=reply)]
+        )
+        messaging_api.reply_message(reply_message_request)
 # pokeapiから図鑑風情報を取得
 def get_random_pokemon_zukan_info():
     import random
