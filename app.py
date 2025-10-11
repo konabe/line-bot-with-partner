@@ -154,10 +154,10 @@ def handle_message(event):
         return
     # ポケモンと送信された場合
     if text.strip() == 'ポケモン':
-        logger.info("ポケモンリクエスト受信。ランダムポケモン情報を返信")
-        info = get_random_pokemon_info()
+        logger.info("ポケモンリクエスト受信。図鑑風情報を返信")
+        info = get_random_pokemon_zukan_info()
         if info:
-            flex = create_pokemon_flex(info['name'], info['image_url'])
+            flex = create_pokemon_zukan_flex(info)
             from linebot.v3.messaging.models import ReplyMessageRequest
             reply_message_request = ReplyMessageRequest(
                 reply_token=event.reply_token,
@@ -168,7 +168,7 @@ def handle_message(event):
             from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
             reply_message_request = ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text="ポケモン情報の取得に失敗しました。")]
+                messages=[TextMessage(text="ポケモン図鑑情報の取得に失敗しました。")]
             )
             safe_reply_message(reply_message_request)
         return
