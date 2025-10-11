@@ -19,7 +19,7 @@ CHANNEL_SECRET = os.environ.get('LINE_CHANNEL_SECRET', '')
 CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
 
 app = Flask(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger = logging.getLogger(__name__)
 
 messaging_api = MessagingApi(CHANNEL_ACCESS_TOKEN)
@@ -28,6 +28,7 @@ handler = WebhookHandler(CHANNEL_SECRET)
 
 @app.route('/health', methods=['GET'])
 def health():
+    logger.debug("/health endpoint called")
     return 'ok', 200
 
 
@@ -35,20 +36,26 @@ def health():
 def callback():
     signature = request.headers.get('X-Line-Signature', '')
     body = request.get_data(as_text=True)
-
+    logger.debug(f"/callback called. Signature: {signature}, Body: {body}")
     try:
         handler.handle(body, signature)
+        logger.debug("handler.handle succeeded")
     except InvalidSignatureError:
+        logger.error("InvalidSignatureError: signature invalid")
         abort(400)
-
+    except Exception as e:
+        logger.error(f"Exception in handler.handle: {e}")
+        abort(500)
     return 'OK', 200
 
 
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     text = event.message.text
+    logger.debug(f"handle_message called. text: {text}")
     # じゃんけんテンプレート表示
     if text.strip() == 'じゃんけん':
+        logger.info("じゃんけんテンプレートを送信")
         template = TemplateMessage(
             alt_text="じゃんけんしましょう！",
             template=ButtonsTemplate(
@@ -73,6 +80,7 @@ from linebot.v3.webhooks.models.postback_event import PostbackEvent
 @handler.add(PostbackEvent)
 def handle_postback(event):
     data = event.postback.data
+    logger.debug(f"handle_postback called. data: {data}")
     if data and data.startswith("janken:"):
         user_hand = data.split(":")[1]
         JANKEN_EMOJIS = {'✊': 'グー', '✌️': 'チョキ', '✋': 'パー'}
@@ -80,6 +88,7 @@ def handle_postback(event):
         bot_hand = random.choice(list(JANKEN_EMOJIS.keys()))
         result = judge_janken(user_hand, bot_hand)
         reply = f"あなた: {user_hand}\nBot: {bot_hand}\n結果: {result}"
+        logger.info(f"じゃんけん結果: {reply}")
         from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
         reply_message_request = ReplyMessageRequest(
             reply_token=event.reply_token,
@@ -91,6 +100,7 @@ def get_random_pokemon_zukan_info():
     import random
     import requests
     try:
+        logger.debug("get_random_pokemon_zukan_info called")
         resp = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1')
         resp.raise_for_status()
         count = resp.json().get('count', 1000)
@@ -127,6 +137,7 @@ def get_random_pokemon_zukan_info():
                         extract_evo_names(e)
                 extract_evo_names(chain)
                 evolution = ' → '.join(evo_names)
+        logger.info(f"取得したポケモン: {name} (No.{zukan_no})")
         return {
             'zukan_no': zukan_no,
             'name': name,
@@ -134,7 +145,8 @@ def get_random_pokemon_zukan_info():
             'types': types,
             'evolution': evolution
         }
-    except Exception:
+    except Exception as e:
+        logger.error(f"get_random_pokemon_zukan_info error: {e}")
         return None
 
 # 図鑑風FLEX Message生成
@@ -195,6 +207,7 @@ def get_random_pokemon_info():
     import random
     import requests
     try:
+        logger.debug("get_random_pokemon_info called")
         resp = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1')
         resp.raise_for_status()
         count = resp.json().get('count', 1000)
@@ -213,8 +226,10 @@ def get_random_pokemon_info():
                 if n.get('language', {}).get('name') == 'ja':
                     name = n.get('name')
                     break
+        logger.info(f"取得したポケモン: {name}")
         return {'name': name, 'image_url': image_url}
-    except Exception:
+    except Exception as e:
+        logger.error(f"get_random_pokemon_info error: {e}")
         return None
 
 # FLEX Message生成
@@ -272,6 +287,7 @@ def get_hakata_weather_text():
         "&language=ja"
     )
     try:
+        logger.debug(f"get_hakata_weather_text called. url: {url}")
         resp = requests.get(url, timeout=5)
         resp.raise_for_status()
         data = resp.json()
@@ -282,8 +298,10 @@ def get_hakata_weather_text():
         desc = weather_code_to_japanese(code)
         if temp is None:
             raise ValueError('no temperature')
+        logger.info(f"博多天気: {desc}, 気温: {temp}, 風速: {wind}")
         return f"博多の現在の天気: {desc} / 気温 {temp}℃ / 風速 {wind}m/s"
-    except Exception:
+    except Exception as e:
+        logger.error(f"get_hakata_weather_text error: {e}")
         return "現在天気を取得できませんでした (しばらくして再度お試しください)"
 
 
@@ -353,8 +371,10 @@ def geocode_location(name: str):
 
 
 def get_location_weather_text(location_name: str):
+    logger.debug(f"get_location_weather_text called. location_name: {location_name}")
     geo = geocode_location(location_name)
     if not geo:
+        logger.warning(f"地名解決失敗: {location_name}")
         return f"『{location_name}』の天気を見つけられませんでした"
     lat, lon, resolved = geo
     url = (
@@ -363,6 +383,7 @@ def get_location_weather_text(location_name: str):
         '&timezone=Asia%2FTokyo&language=ja'
     )
     try:
+        logger.debug(f"天気API呼び出し: {url}")
         resp = requests.get(url, timeout=5)
         resp.raise_for_status()
         data = resp.json()
@@ -374,13 +395,16 @@ def get_location_weather_text(location_name: str):
         if temp is None:
             raise ValueError('no temperature')
         shown = resolved or location_name
+        logger.info(f"{shown}の天気: {desc}, 気温: {temp}, 風速: {wind}")
         return f"{shown}の現在の天気: {desc} / 気温 {temp}℃ / 風速 {wind}m/s"
-    except Exception:
+    except Exception as e:
+        logger.error(f"get_location_weather_text error: {e}")
         return f"現在{location_name}の天気を取得できませんでした"
 
 
 
 if __name__ == '__main__':
+    logger.info("Flask app starting...")
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
 
 

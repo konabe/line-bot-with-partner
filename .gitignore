@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# VSCode
+.vscode/
+
+# 環境ファイル
+.env
+.env.*
+
+# テスト出力
+htmlcov/
+.coverage
+
+# OSファイル
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log
+
+# その他
+*.sqlite3
+*.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# pip
+pip-wheel-metadata/
+
+# その他
+*.bak
+*.swp
+*.swo
+
+# node
+node_modules/

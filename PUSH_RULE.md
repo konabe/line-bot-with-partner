@@ -10,7 +10,7 @@
 - テストコマンド例：
 
 ```bash
-pytest
+PYTHONPATH=. pytest
 ```
 
 ## 3. 注意事項
