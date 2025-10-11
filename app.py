@@ -20,6 +20,11 @@ load_dotenv()
 CHANNEL_SECRET = os.environ.get('LINE_CHANNEL_SECRET', '')
 CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
 
+# Code-embedded upper bound for zukan selection
+# Set this to the desired maximum pokedex number (None to use API count)
+# Assumption: default to 151 (Gen 1) — change this value if you want a different cap.
+POKEMON_ZUKAN_MAX = 1017
+
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger = logging.getLogger(__name__)
@@ -201,19 +206,20 @@ def get_random_pokemon_zukan_info():
         resp = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1')
         resp.raise_for_status()
         count = resp.json().get('count', 1000)
-        # Allow overriding the upper bound of zukan numbers via env var POKEMON_ZUKAN_MAX
-        max_env = os.environ.get('POKEMON_ZUKAN_MAX')
-        max_id = count
-        if max_env:
+        # Use code-embedded POKEMON_ZUKAN_MAX to cap selection if set, otherwise use API count
+        if POKEMON_ZUKAN_MAX is not None:
             try:
-                max_env_int = int(max_env)
-                if max_env_int > 0:
-                    max_id = min(count, max_env_int)
-                    logger.debug(f"POKEMON_ZUKAN_MAX applied: using max_id={max_id} (count={count})")
+                max_id = min(count, int(POKEMON_ZUKAN_MAX))
+                if max_id < 1:
+                    logger.warning(f"POKEMON_ZUKAN_MAX < 1 ({POKEMON_ZUKAN_MAX}), falling back to count={count}")
+                    max_id = count
                 else:
-                    logger.warning(f"POKEMON_ZUKAN_MAX is not >0: {max_env_int}; ignoring")
+                    logger.debug(f"Using code-embedded POKEMON_ZUKAN_MAX: max_id={max_id} (count={count})")
             except Exception:
-                logger.warning(f"Invalid POKEMON_ZUKAN_MAX value: {max_env}; ignoring")
+                logger.warning(f"Invalid POKEMON_ZUKAN_MAX in code: {POKEMON_ZUKAN_MAX}; falling back to count={count}")
+                max_id = count
+        else:
+            max_id = count
         poke_id = random.randint(1, max_id)
         resp2 = requests.get(f'https://pokeapi.co/api/v2/pokemon/{poke_id}')
         resp2.raise_for_status()
