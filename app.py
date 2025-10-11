@@ -280,10 +280,9 @@ def create_pokemon_zukan_flex(info):
     # Evolution info
     evo = FlexText(text=f"進化: {evolution}", size="sm", color="#666666", align="center")
 
+    # Avoid duplicating the image: use hero only for the main image
     body = FlexBox(layout="vertical", contents=[
         header,
-        FlexSeparator(margin="md"),
-        hero,
         FlexSeparator(margin="md"),
         types_box,
         FlexSeparator(margin="sm"),
