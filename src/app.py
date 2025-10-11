@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from linebot.v3.messaging import MessagingApi
 from linebot.v3.messaging.api_client import ApiClient
 from linebot.v3.messaging.configuration import Configuration
-from messaging import init_messaging_api, safe_reply_message, safe_push_message
+from .messaging import init_messaging_api, safe_reply_message, safe_push_message
 from linebot.v3.webhook import WebhookHandler
 from linebot.v3.webhooks.models.message_event import MessageEvent
 from linebot.v3.webhooks.models.text_message_content import TextMessageContent
@@ -15,7 +15,7 @@ from linebot.v3.messaging.models import TextMessage, FlexMessage, TemplateMessag
 from linebot.v3.exceptions import InvalidSignatureError
 import re
 from functools import lru_cache
-from umigame import UMIGAME_STATE, is_closed_question, call_openai_yesno_with_secret, generate_umigame_puzzle
+from .umigame import UMIGAME_STATE, is_closed_question, call_openai_yesno_with_secret, generate_umigame_puzzle
 
 load_dotenv()
 

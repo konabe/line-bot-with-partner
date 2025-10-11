@@ -1,6 +1,6 @@
 import re
 import logging
-from openai_helpers import call_openai_yesno_with_secret, generate_umigame_puzzle
+from .openai_helpers import call_openai_yesno_with_secret, generate_umigame_puzzle
 
 logger = logging.getLogger(__name__)
 
