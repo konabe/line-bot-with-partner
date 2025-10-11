@@ -195,16 +195,61 @@ def get_random_pokemon_zukan_info():
 
 # 図鑑風FLEX Message生成 (v3 FlexMessage を返す)
 def create_pokemon_zukan_flex(info):
-    from linebot.v3.messaging.models import FlexBubble, FlexImage, FlexBox, FlexText
-    type_text = ' / '.join(info['types']) if info['types'] else '不明'
-    hero = FlexImage(url=info['image_url'] or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png", size="xl", aspect_ratio="1:1", aspect_mode="cover")
+    from linebot.v3.messaging.models import FlexBubble, FlexImage, FlexBox, FlexText, FlexSeparator
+    # prepare values
+    types = info.get('types') or []
+    zukan_no = info.get('zukan_no') or ''
+    name = info.get('name') or '不明'
+    evolution = info.get('evolution') or 'なし'
+
+    # Hero image
+    hero = FlexImage(
+        url=info['image_url'] or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png",
+        size="xl",
+        aspect_ratio="1:1",
+        aspect_mode="cover"
+    )
+
+    # Header: No. and name
+    header = FlexBox(
+        layout="vertical",
+        contents=[
+            FlexText(text=f"No.{zukan_no}", weight="bold", size="sm", color="#999999", align="center"),
+            FlexText(text=name, weight="bold", size="xl", align="center")
+        ]
+    )
+
+    # Types box: show each type as a small text chip (use color to hint type)
+    type_items = []
+    for t in types:
+        # choose a text color per type (simple hash -> color)
+        color = "#666666"
+        try:
+            h = abs(hash(t))
+            # pick from a small palette
+            palette = ["#A8A77A", "#C22E28", "#A33EA1", "#E2BF65", "#7AC74C", "#B7B7CE", "#6390F0"]
+            color = palette[h % len(palette)]
+        except Exception:
+            color = "#666666"
+        type_items.append(FlexText(text=t, size="sm", color=color, align="center"))
+
+    types_box = FlexBox(layout="baseline", contents=type_items)
+
+    # Evolution info
+    evo = FlexText(text=f"進化: {evolution}", size="sm", color="#666666", align="center")
+
     body = FlexBox(layout="vertical", contents=[
-        FlexText(text=f"No.{info['zukan_no']} {info['name']}", weight="bold", size="xl", align="center"),
-        FlexText(text=f"タイプ: {type_text}", size="md", align="center"),
-        FlexText(text=f"進化: {info['evolution']}", size="sm", align="center")
+        header,
+        FlexSeparator(margin="md"),
+        hero,
+        FlexSeparator(margin="md"),
+        types_box,
+        FlexSeparator(margin="sm"),
+        evo
     ])
+
     bubble = FlexBubble(hero=hero, body=body)
-    return FlexMessage(alt_text=f"ポケモン図鑑: {info['name']}", contents=bubble)
+    return FlexMessage(alt_text=f"ポケモン図鑑: {name}", contents=bubble)
 
     # じゃんけん絵文字判定
     JANKEN_EMOJIS = {'✊': 'グー', '✌️': 'チョキ', '✋': 'パー'}
