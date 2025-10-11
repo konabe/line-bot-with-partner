@@ -210,11 +210,17 @@ def create_pokemon_zukan_flex(info):
         aspect_mode="cover"
     )
 
-    # Header: No. and name
+    # Header: No. and name (zero-pad to at least 3 digits)
+    try:
+        z_no = int(zukan_no)
+        zukan_display = f"No.{z_no:03d}"
+    except Exception:
+        zukan_display = f"No.{zukan_no}"
+
     header = FlexBox(
         layout="vertical",
         contents=[
-            FlexText(text=f"No.{zukan_no}", weight="bold", size="sm", color="#999999", align="center"),
+            FlexText(text=zukan_display, weight="bold", size="sm", color="#999999", align="center"),
             FlexText(text=name, weight="bold", size="xl", align="center")
         ]
     )
