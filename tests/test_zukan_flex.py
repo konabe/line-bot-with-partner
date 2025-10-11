@@ -1,10 +1,4 @@
-import types
 from zukan_flex import create_pokemon_zukan_flex_dict
-
-class DummyFlex:
-    def __init__(self, alt_text, contents):
-        self.alt_text = alt_text
-        self.contents = contents
 
 def test_create_pokemon_zukan_flex_dict():
     info = {
