@@ -66,19 +66,20 @@ JSON
 
 # If OWNER_ID not provided, try to discover via Render API
 if [ -z "${OWNER_ID:-}" ]; then
-  echo "OWNER_ID not set — querying Render API for owners..."
-  OWNERS_JSON=$(curl -sS -H "$AUTH_HEADER" -H "Accept: application/json" https://api.render.com/v1/owners) || true
-  if [ -n "$OWNERS_JSON" ] && command -v jq >/dev/null 2>&1; then
-    DISCOVERED_OWNER=$(echo "$OWNERS_JSON" | jq -r '.[0].id // .[0].ownerId // empty') || true
+  echo "OWNER_ID not set — trying to discover via /v1/services..."
+  SERVICES_JSON=$(curl -sS -H "$AUTH_HEADER" -H "Accept: application/json" https://api.render.com/v1/services) || true
+  if [ -n "$SERVICES_JSON" ] && command -v jq >/dev/null 2>&1; then
+    # Try to extract first service.ownerId
+    DISCOVERED_OWNER=$(echo "$SERVICES_JSON" | jq -r '.[0].service.ownerId // .[0].ownerId // empty') || true
     if [ -n "$DISCOVERED_OWNER" ]; then
       OWNER_ID="$DISCOVERED_OWNER"
-      echo "Discovered ownerId: $OWNER_ID"
+      echo "Discovered ownerId from services: $OWNER_ID"
       jq --arg ownerId "$OWNER_ID" '.ownerId=$ownerId' "$PAYLOAD_FILE" > "$PAYLOAD_FILE.tmp" && mv "$PAYLOAD_FILE.tmp" "$PAYLOAD_FILE" || true
     else
-      echo "Could not discover ownerId via API. Please set OWNER_ID env var to your account/team id." >&2
+      echo "Could not discover ownerId from services response. Please set OWNER_ID env var to your account/team id." >&2
     fi
   else
-    echo "Could not query owners (jq not available or empty response). Please set OWNER_ID env var manually." >&2
+    echo "Could not query services or jq not available. Please set OWNER_ID env var manually." >&2
   fi
 fi
 
