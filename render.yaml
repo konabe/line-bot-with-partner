@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: mcp-server
+    runtime: docker
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: LINE_CHANNEL_SECRET
+        sync: false
+      - key: LINE_CHANNEL_ACCESS_TOKEN
+        sync: false
+      - key: PORT
+        value: 8080
