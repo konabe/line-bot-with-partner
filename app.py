@@ -47,18 +47,105 @@ def handle_message(event):
     text = event.message.text
     # ポケモン名出力機能
     if text.strip() == 'ポケモン':
-        info = get_random_pokemon_info()
+        info = get_random_pokemon_zukan_info()
         if info is None:
             reply = TextSendMessage(text="ポケモン情報の取得に失敗しました")
-        else:
-            flex = create_pokemon_flex(info['name'], info['image_url'])
-            reply = flex
-        # FLEX Messageの場合
-        if hasattr(reply, 'alt_text'):
             messaging_api.reply_message(event.reply_token, [reply])
-        else:
-            messaging_api.reply_message(event.reply_token, [TextSendMessage(text=reply)])
+            return
+        flex = create_pokemon_zukan_flex(info)
+        messaging_api.reply_message(event.reply_token, [flex])
         return
+# pokeapiから図鑑風情報を取得
+def get_random_pokemon_zukan_info():
+    import random
+    import requests
+    try:
+        resp = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1')
+        resp.raise_for_status()
+        count = resp.json().get('count', 1000)
+        poke_id = random.randint(1, count)
+        resp2 = requests.get(f'https://pokeapi.co/api/v2/pokemon/{poke_id}')
+        resp2.raise_for_status()
+        name = resp2.json().get('name', '不明')
+        image_url = resp2.json().get('sprites', {}).get('other', {}).get('official-artwork', {}).get('front_default')
+        types = [t['type']['name'] for t in resp2.json().get('types', [])]
+        # 日本語名取得（speciesエンドポイント）
+        species_url = resp2.json().get('species', {}).get('url')
+        zukan_no = poke_id
+        evolution = ""
+        if species_url:
+            resp3 = requests.get(species_url)
+            resp3.raise_for_status()
+            names = resp3.json().get('names', [])
+            for n in names:
+                if n.get('language', {}).get('name') == 'ja':
+                    name = n.get('name')
+                    break
+            zukan_no = resp3.json().get('id', poke_id)
+            # 進化情報取得
+            evo_url = resp3.json().get('evolution_chain', {}).get('url')
+            if evo_url:
+                resp4 = requests.get(evo_url)
+                resp4.raise_for_status()
+                chain = resp4.json().get('chain', {})
+                evo_names = []
+                def extract_evo_names(chain):
+                    if 'species' in chain:
+                        evo_names.append(chain['species']['name'])
+                    for e in chain.get('evolves_to', []):
+                        extract_evo_names(e)
+                extract_evo_names(chain)
+                evolution = ' → '.join(evo_names)
+        return {
+            'zukan_no': zukan_no,
+            'name': name,
+            'image_url': image_url,
+            'types': types,
+            'evolution': evolution
+        }
+    except Exception:
+        return None
+
+# 図鑑風FLEX Message生成
+from linebot.models import FlexSendMessage
+def create_pokemon_zukan_flex(info):
+    type_text = ' / '.join(info['types']) if info['types'] else '不明'
+    flex = {
+        "type": "bubble",
+        "hero": {
+            "type": "image",
+            "url": info['image_url'] or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png",
+            "size": "xl",
+            "aspectRatio": "1:1",
+            "aspectMode": "cover"
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": f"No.{info['zukan_no']} {info['name']}",
+                    "weight": "bold",
+                    "size": "xl",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": f"タイプ: {type_text}",
+                    "size": "md",
+                    "align": "center"
+                },
+                {
+                    "type": "text",
+                    "text": f"進化: {info['evolution']}",
+                    "size": "sm",
+                    "align": "center"
+                }
+            ]
+        }
+    }
+    return FlexSendMessage(alt_text=f"ポケモン図鑑: {info['name']}", contents=flex)
 
     # じゃんけん絵文字判定
     JANKEN_EMOJIS = {'✊': 'グー', '✌️': 'チョキ', '✋': 'パー'}
@@ -70,7 +157,7 @@ def handle_message(event):
         result = judge_janken(user_hand, bot_hand)
         reply = f"あなた: {user_hand}\nBot: {bot_hand}\n結果: {result}"
     messaging_api.reply_message(event.reply_token, [TextSendMessage(text=reply)])
-        return
+    return
 
 # pokeapiからランダムなポケモン名と画像URLを取得
 def get_random_pokemon_info():
@@ -127,20 +214,7 @@ def create_pokemon_flex(name, image_url):
     }
     return FlexSendMessage(alt_text=f"今日のポケモン: {name}", contents=flex)
 
-    # キーワード: 博多の天気 (ゆるいマッチ: 空白差異/末尾句読点などを考慮)
-    normalized = text.strip().replace('　', ' ')
-    # 汎用『◯◯の天気』対応
-    loc = extract_location_from_weather_query(normalized)
-    if loc:
-        if loc in ['博多', '博多駅']:
-            weather_text = get_hakata_weather_text()
-        else:
-            weather_text = get_location_weather_text(loc)
-    messaging_api.reply_message(event.reply_token, [TextSendMessage(text=weather_text)])
-        return
-
-    # コマンド以外は返信しない
-    return
+    # ...existing code...
 
 # じゃんけん判定関数
 def judge_janken(user, bot):
