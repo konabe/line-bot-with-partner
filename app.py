@@ -8,7 +8,7 @@ from linebot.v3.messaging import MessagingApi
 from linebot.v3.webhook import WebhookHandler
 from linebot.v3.webhooks.models.message_event import MessageEvent
 from linebot.v3.webhooks.models.text_message_content import TextMessageContent
-from linebot.v3.messaging.models import TextMessage, FlexMessage
+from linebot.v3.messaging.models import TextMessage, FlexMessage, TemplateMessage, ButtonsTemplate, PostbackAction
 from linebot.v3.exceptions import InvalidSignatureError
 import re
 from functools import lru_cache
@@ -47,6 +47,35 @@ def callback():
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_message(event):
     text = event.message.text
+    # じゃんけんテンプレート表示
+    if text.strip() == 'じゃんけん':
+        template = TemplateMessage(
+            alt_text="じゃんけんしましょう！",
+            template=ButtonsTemplate(
+                title="じゃんけん",
+                text="どれを出しますか？",
+                actions=[
+                    PostbackAction(label="✊ グー", data="janken:✊"),
+                    PostbackAction(label="✌️ チョキ", data="janken:✌️"),
+                    PostbackAction(label="✋ パー", data="janken:✋")
+                ]
+            )
+        )
+        messaging_api.reply_message(event.reply_token, [template])
+        return
+# じゃんけんのpostbackイベントハンドラ
+from linebot.v3.webhooks.models.postback_event import PostbackEvent
+@handler.add(PostbackEvent)
+def handle_postback(event):
+    data = event.postback.data
+    if data and data.startswith("janken:"):
+        user_hand = data.split(":")[1]
+        JANKEN_EMOJIS = {'✊': 'グー', '✌️': 'チョキ', '✋': 'パー'}
+        import random
+        bot_hand = random.choice(list(JANKEN_EMOJIS.keys()))
+        result = judge_janken(user_hand, bot_hand)
+        reply = f"あなた: {user_hand}\nBot: {bot_hand}\n結果: {result}"
+        messaging_api.reply_message(event.reply_token, [TextMessage(text=reply)])
     # ポケモン名出力機能
     if text.strip() == 'ポケモン':
         info = get_random_pokemon_zukan_info()
