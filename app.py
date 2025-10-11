@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
+import re
+from functools import lru_cache
 
 load_dotenv()
 
@@ -44,8 +46,13 @@ def handle_message(event):
     text = event.message.text
     # キーワード: 博多の天気 (ゆるいマッチ: 空白差異/末尾句読点などを考慮)
     normalized = text.strip().replace('　', ' ')
-    if '博多' in normalized and '天気' in normalized:
-        weather_text = get_hakata_weather_text()
+    # 汎用『◯◯の天気』対応
+    loc = extract_location_from_weather_query(normalized)
+    if loc:
+        if loc in ['博多', '博多駅']:
+            weather_text = get_hakata_weather_text()
+        else:
+            weather_text = get_location_weather_text(loc)
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=weather_text))
         return
 
@@ -99,6 +106,80 @@ def weather_code_to_japanese(code):
         95: '雷雨', 96: '雷雨(ひょう小)', 99: '雷雨(ひょう大)',
     }
     return mapping.get(code, '不明')
+
+
+# ---- Generic location weather ---------------------------------------------
+
+_WEATHER_CURRENT_FIELDS = 'temperature_2m,weather_code,wind_speed_10m'
+
+
+def extract_location_from_weather_query(text: str):
+    """『◯◯の天気』形式なら ◯◯ を返す。
+
+    許容例: '東京の天気', ' 東京 の天気', '大阪の天気？', '札幌の天気です' など。
+    末尾に句読点/助詞が付いても最初のマッチを利用。
+    """
+    # 全角スペース→半角、全角『？』など除去用に末尾記号を落とす
+    t = re.sub(r'[\u3000]', ' ', text)
+    m = re.search(r'(.+?)の天気', t)
+    if not m:
+        return None
+    loc = m.group(1).strip()
+    # 不要な助詞/語尾 (です/は/って) を雑に除去
+    loc = re.sub(r'(?:は|って|です)$', '', loc)
+    if not loc:
+        return None
+    return loc
+
+
+@lru_cache(maxsize=128)
+def geocode_location(name: str):
+    """地名を Open-Meteo Geocoding で緯度経度へ解決。
+
+    Returns: (lat, lon, resolved_name) or None
+    """
+    url = (
+        'https://geocoding-api.open-meteo.com/v1/search'
+        f'?name={requests.utils.quote(name)}&count=1&language=ja&format=json'
+    )
+    try:
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        results = data.get('results') or []
+        if not results:
+            return None
+        r0 = results[0]
+        return (r0.get('latitude'), r0.get('longitude'), r0.get('name'))
+    except Exception:
+        return None
+
+
+def get_location_weather_text(location_name: str):
+    geo = geocode_location(location_name)
+    if not geo:
+        return f"『{location_name}』の天気を見つけられませんでした"
+    lat, lon, resolved = geo
+    url = (
+        'https://api.open-meteo.com/v1/forecast'
+        f'?latitude={lat}&longitude={lon}&current={_WEATHER_CURRENT_FIELDS}'
+        '&timezone=Asia%2FTokyo&language=ja'
+    )
+    try:
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        current = data.get('current', {})
+        temp = current.get('temperature_2m')
+        wind = current.get('wind_speed_10m')
+        code = current.get('weather_code')
+        desc = weather_code_to_japanese(code)
+        if temp is None:
+            raise ValueError('no temperature')
+        shown = resolved or location_name
+        return f"{shown}の現在の天気: {desc} / 気温 {temp}℃ / 風速 {wind}m/s"
+    except Exception:
+        return f"現在{location_name}の天気を取得できませんでした"
 
 
 if __name__ == '__main__':

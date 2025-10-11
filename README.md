@@ -29,6 +29,20 @@ STARTUP_NOTIFY_MESSAGE=Bot サーバーが再起動しました (deploy)
 ```
 
 Render などの PaaS での再デプロイ時にもプロセス起動直後に 1 回だけ送信されます。複数ワーカーを立てる構成ではワーカー毎に送信される可能性があるため注意してください (必要なら外部ストレージ/DBで排他制御してください)。
+
+## 任意の場所の天気を取得
+
+LINE で「◯◯の天気」と送ると、◯◯ を地名としてジオコーディングし現在の天気を返信します。
+
+例:
+
+```
+東京の天気
+大阪の天気です
+札幌の天気？
+```
+
+解決に失敗した場合は「『◯◯』の天気を見つけられませんでした」と返答します。内部では Open-Meteo Geocoding API と Forecast API を利用しています。頻度が高い場合はレート制限に注意してください。
 # What is this?
 
 The github.dev web-based editor is a lightweight editing experience that runs entirely in your browser. You can navigate files and source code repositories from GitHub, and make and commit code changes.
