@@ -59,6 +59,21 @@ def safe_reply_message(reply_message_request):
         logger.error(f"Error when calling messaging_api.reply_message: {e}")
 
 
+def safe_push_message(push_message_request):
+    """Wrapper to call messaging_api.push_message safely."""
+    if messaging_api is None:
+        logger.warning("messaging_api is not initialized; skipping push_message")
+        return
+    try:
+        try:
+            logger.debug(f"push payload: {push_message_request.to_dict()}")
+        except Exception:
+            logger.debug("push payload: <unable to serialize>")
+        messaging_api.push_message(push_message_request)
+    except Exception as e:
+        logger.error(f"Error when calling messaging_api.push_message: {e}")
+
+
 @app.route('/debug/zukan', methods=['GET'])
 def debug_zukan():
     """Return a sample zukan Flex payload for inspection.
@@ -118,6 +133,53 @@ def callback():
 def handle_message(event):
     text = event.message.text
     logger.debug(f"handle_message called. text: {text}")
+    # 直接送信テスト: ユーザーに push で現在日時を送信する
+    if text.strip() == '直接送信テスト':
+        logger.info("直接送信テストを受信: 対象ユーザーへ push 送信を試みます")
+        # event.source に user_id があるはず
+        user_id = None
+        try:
+            user_id = getattr(event.source, 'user_id', None) or getattr(event.source, 'userId', None)
+        except Exception:
+            user_id = None
+        if not user_id:
+            logger.error("user_id が取得できません。push を送信できません")
+            from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+            reply_message_request = ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="直接送信ができませんでした: user_id が不明です")]
+            )
+            safe_reply_message(reply_message_request)
+            return
+        # 現在日時を Asia/Tokyo で取得
+        try:
+            from datetime import datetime
+            try:
+                from zoneinfo import ZoneInfo
+                now = datetime.now(ZoneInfo('Asia/Tokyo'))
+            except Exception:
+                now = datetime.now()
+            now_str = now.strftime('%Y-%m-%d %H:%M:%S %Z')
+        except Exception as e:
+            logger.error(f"日時文字列作成に失敗: {e}")
+            now_str = '取得できませんでした'
+        from linebot.v3.messaging.models import PushMessageRequest, TextMessage
+        push_message_request = PushMessageRequest(
+            to=user_id,
+            messages=[TextMessage(text=f"現在の日時: {now_str}")]
+        )
+        safe_push_message(push_message_request)
+        # inform via reply that push を送った（任意）
+        try:
+            from linebot.v3.messaging.models import ReplyMessageRequest
+            reply_message_request = ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="直接送信を行いました。")]
+            )
+            safe_reply_message(reply_message_request)
+        except Exception:
+            pass
+        return
     # 天気問い合わせ (例: '東京の天気', '天気') に反応
     if '天気' in text:
         logger.info("天気リクエスト検出")
