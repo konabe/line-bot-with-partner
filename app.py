@@ -5,6 +5,8 @@ import requests
 from flask import Flask, request, abort
 from dotenv import load_dotenv
 from linebot.v3.messaging import MessagingApi
+from linebot.v3.messaging.api_client import ApiClient
+from linebot.v3.messaging.configuration import Configuration
 from linebot.v3.webhook import WebhookHandler
 from linebot.v3.webhooks.models.message_event import MessageEvent
 from linebot.v3.webhooks.models.text_message_content import TextMessageContent
@@ -22,7 +24,29 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 logger = logging.getLogger(__name__)
 
-messaging_api = MessagingApi(CHANNEL_ACCESS_TOKEN)
+# Initialize MessagingApi with ApiClient and Configuration
+try:
+    _config = Configuration(access_token=CHANNEL_ACCESS_TOKEN)
+    _api_client = ApiClient(configuration=_config)
+    messaging_api = MessagingApi(_api_client)
+except Exception as e:
+    # Fallback: if initialization fails, keep a placeholder and log later
+    messaging_api = None
+    logger.error(f"Failed to initialize MessagingApi: {e}")
+
+
+def safe_reply_message(reply_message_request):
+    """Wrapper to call messaging_api.reply_message safely.
+
+    If messaging_api is not initialized, log and skip instead of raising.
+    """
+    if messaging_api is None:
+        logger.warning("messaging_api is not initialized; skipping reply_message")
+        return
+    try:
+        messaging_api.reply_message(reply_message_request)
+    except Exception as e:
+        logger.error(f"Error when calling messaging_api.reply_message: {e}")
 handler = WebhookHandler(CHANNEL_SECRET)
 
 
@@ -73,7 +97,7 @@ def handle_message(event):
             reply_token=event.reply_token,
             messages=[template]
         )
-        messaging_api.reply_message(reply_message_request)
+        safe_reply_message(reply_message_request)
         return
     # ポケモンと送信された場合
     if text.strip() == 'ポケモン':
@@ -86,14 +110,14 @@ def handle_message(event):
                 reply_token=event.reply_token,
                 messages=[flex]
             )
-            messaging_api.reply_message(reply_message_request)
+            safe_reply_message(reply_message_request)
         else:
             from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
             reply_message_request = ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[TextMessage(text="ポケモン情報の取得に失敗しました。")]
             )
-            messaging_api.reply_message(reply_message_request)
+            safe_reply_message(reply_message_request)
         return
 # じゃんけんのpostbackイベントハンドラ
 from linebot.v3.webhooks.models.postback_event import PostbackEvent
@@ -114,7 +138,7 @@ def handle_postback(event):
             reply_token=event.reply_token,
             messages=[TextMessage(text=reply)]
         )
-        messaging_api.reply_message(reply_message_request)
+        safe_reply_message(reply_message_request)
 # pokeapiから図鑑風情報を取得
 def get_random_pokemon_zukan_info():
     import random
