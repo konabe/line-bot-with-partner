@@ -195,43 +195,16 @@ def get_random_pokemon_zukan_info():
 
 # 図鑑風FLEX Message生成 (v3 FlexMessage を返す)
 def create_pokemon_zukan_flex(info):
+    from linebot.v3.messaging.models import FlexBubble, FlexImage, FlexBox, FlexText
     type_text = ' / '.join(info['types']) if info['types'] else '不明'
-    flex = {
-        "type": "bubble",
-        "hero": {
-            "type": "image",
-            "url": info['image_url'] or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png",
-            "size": "xl",
-            "aspectRatio": "1:1",
-            "aspectMode": "cover"
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": f"No.{info['zukan_no']} {info['name']}",
-                    "weight": "bold",
-                    "size": "xl",
-                    "align": "center"
-                },
-                {
-                    "type": "text",
-                    "text": f"タイプ: {type_text}",
-                    "size": "md",
-                    "align": "center"
-                },
-                {
-                    "type": "text",
-                    "text": f"進化: {info['evolution']}",
-                    "size": "sm",
-                    "align": "center"
-                }
-            ]
-        }
-    }
-    return FlexMessage(alt_text=f"ポケモン図鑑: {info['name']}", contents=flex)
+    hero = FlexImage(url=info['image_url'] or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png", size="xl", aspect_ratio="1:1", aspect_mode="cover")
+    body = FlexBox(layout="vertical", contents=[
+        FlexText(text=f"No.{info['zukan_no']} {info['name']}", weight="bold", size="xl", align="center"),
+        FlexText(text=f"タイプ: {type_text}", size="md", align="center"),
+        FlexText(text=f"進化: {info['evolution']}", size="sm", align="center")
+    ])
+    bubble = FlexBubble(hero=hero, body=body)
+    return FlexMessage(alt_text=f"ポケモン図鑑: {info['name']}", contents=bubble)
 
     # じゃんけん絵文字判定
     JANKEN_EMOJIS = {'✊': 'グー', '✌️': 'チョキ', '✋': 'パー'}
@@ -277,30 +250,13 @@ def get_random_pokemon_info():
 
 # FLEX Message生成 (v3 FlexMessage を返す)
 def create_pokemon_flex(name, image_url):
-    flex = {
-        "type": "bubble",
-        "hero": {
-            "type": "image",
-            "url": image_url or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png",
-            "size": "xl",
-            "aspectRatio": "1:1",
-            "aspectMode": "cover"
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": name,
-                    "weight": "bold",
-                    "size": "xl",
-                    "align": "center"
-                }
-            ]
-        }
-    }
-    return FlexMessage(alt_text=f"今日のポケモン: {name}", contents=flex)
+    from linebot.v3.messaging.models import FlexBubble, FlexImage, FlexBox, FlexText
+    hero = FlexImage(url=image_url or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png", size="xl", aspect_ratio="1:1", aspect_mode="cover")
+    body = FlexBox(layout="vertical", contents=[
+        FlexText(text=name, weight="bold", size="xl", align="center")
+    ])
+    bubble = FlexBubble(hero=hero, body=body)
+    return FlexMessage(alt_text=f"今日のポケモン: {name}", contents=bubble)
 
     # ...existing code...
 
