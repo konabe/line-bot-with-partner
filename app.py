@@ -113,6 +113,23 @@ def callback():
 def handle_message(event):
     text = event.message.text
     logger.debug(f"handle_message called. text: {text}")
+    # 天気問い合わせ (例: '東京の天気', '天気') に反応
+    if '天気' in text:
+        logger.info("天気リクエスト検出")
+        loc = extract_location_from_weather_query(text)
+        if loc:
+            logger.debug(f"位置解決: {loc}")
+            reply_text = get_location_weather_text(loc)
+        else:
+            logger.debug("位置未指定のため博多天気を返す")
+            reply_text = get_hakata_weather_text()
+        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+        reply_message_request = ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessage(text=reply_text)]
+        )
+        safe_reply_message(reply_message_request)
+        return
     # じゃんけんテンプレート表示
     if text.strip() == 'じゃんけん':
         logger.info("じゃんけんテンプレートを送信")
