@@ -16,17 +16,33 @@ def is_closed_question(text: str) -> bool:
     完全な判定は困難なので非常に保守的に扱います。
     """
     t = text.strip()
-    closed_endings = ['か？', 'か?', 'かな?', 'かな？', 'か', '?', '？']
-    open_question_starters = ['何', 'なぜ', 'どうして', 'どの', 'どこ', '誰', 'いつ', 'どれ', 'どのくらい', 'どんな']
-    for w in open_question_starters:
-        if t.startswith(w):
+    if not t:
+        return False
+
+    # common open-question keywords
+    open_keywords = ['何', 'なぜ', 'どうして', 'どの', 'どこ', '誰', 'いつ', 'どれ', 'どのくらい', 'どんな', 'どれくらい', 'どうやって']
+    # if any of these appear anywhere and are used as interrogatives, treat as open question
+    for w in open_keywords:
+        if w in t:
             return False
-    if t.endswith(tuple(closed_endings)) or t.endswith('か'):
+
+    # closed question indicators at the end
+    closed_endings = ['か？', 'か?', 'かな?', 'かな？', 'か', '?', '？']
+    if t.endswith(tuple(closed_endings)):
         return True
-    yesno_patterns = ['できますか', 'ありますか', 'いますか', '知っていますか', '分かりますか']
+
+    # phrases that often expect yes/no answer
+    yesno_patterns = [
+        'できますか', 'ありますか', 'いますか', '知っていますか', '分かりますか', '〜ますか', 'でしょうか', '可能ですか', '可能でしょうか'
+    ]
     for p in yesno_patterns:
         if p in t:
             return True
+
+    # short direct questions like 'これでいい？' or 'そう？'
+    if len(t) <= 20 and t.endswith(('？', '?')):
+        return True
+
     return False
 
 
