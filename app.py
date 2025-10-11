@@ -1,4 +1,6 @@
 import os
+import threading
+import logging
 import requests
 from flask import Flask, request, abort
 from dotenv import load_dotenv
@@ -12,6 +14,8 @@ CHANNEL_SECRET = os.environ.get('LINE_CHANNEL_SECRET', '')
 CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 line_bot_api = LineBotApi(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
@@ -98,4 +102,43 @@ def weather_code_to_japanese(code):
 
 
 if __name__ == '__main__':
+    # 起動後に一度だけ通知するスレッドを準備
+    def startup_notify_once():
+        try:
+            maybe_notify_startup()
+        except Exception as e:
+            logger.warning("startup notify failed: %s", e)
+
+    threading.Thread(target=startup_notify_once, daemon=True).start()
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+
+
+# ---- Startup Notification -------------------------------------------------
+_startup_notified = False
+
+
+def maybe_notify_startup():
+    """環境変数で有効化されている場合に LINE へ起動通知を一度だけ送る。
+
+    環境変数:
+      STARTUP_NOTIFY_ENABLED: '1' で有効 (デフォルト無効)
+      STARTUP_NOTIFY_USER_ID: push 先の UserID (必須: 有効化時)
+      STARTUP_NOTIFY_MESSAGE: 送信文 (省略時デフォルト)
+    """
+    global _startup_notified
+    if _startup_notified:
+        return
+    if os.environ.get('STARTUP_NOTIFY_ENABLED') != '1':
+        return
+    user_id = os.environ.get('STARTUP_NOTIFY_USER_ID')
+    if not user_id:
+        logger.warning('STARTUP_NOTIFY_ENABLED=1 ですが STARTUP_NOTIFY_USER_ID が未設定のため送信しません')
+        return
+    message = os.environ.get('STARTUP_NOTIFY_MESSAGE', 'サーバーが起動しました ✅')
+    try:
+        line_bot_api.push_message(user_id, TextSendMessage(text=message))
+        logger.info('Startup notify sent to %s', user_id)
+        _startup_notified = True
+    except Exception as e:
+        logger.warning('起動通知送信に失敗: %s', e)
+

@@ -9,6 +9,26 @@ Flask + line-bot-sdk を使った最小の echo Bot テンプレートです。
 3. ローカルで実行: `python app.py`
 
 Webhook を動かすには public URL が必要です（ngrok 等を使用）。
+
+## 起動通知機能 (Startup Notify)
+
+サーバー起動時に LINE (push) で起動完了メッセージを受け取りたい場合、以下の環境変数を設定します。
+
+| 環境変数 | 必須 | 説明 |
+|----------|------|------|
+| `STARTUP_NOTIFY_ENABLED` | 任意 | `1` で有効化 (未設定/その他は無効) |
+| `STARTUP_NOTIFY_USER_ID` | 有効化時必須 | push 先のユーザー ID (Bot の友だちである必要があります) |
+| `STARTUP_NOTIFY_MESSAGE` | 任意 | 送信する文面。省略時: `サーバーが起動しました ✅` |
+
+例 (.env):
+
+```
+STARTUP_NOTIFY_ENABLED=1
+STARTUP_NOTIFY_USER_ID=Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+STARTUP_NOTIFY_MESSAGE=Bot サーバーが再起動しました (deploy)
+```
+
+Render などの PaaS での再デプロイ時にもプロセス起動直後に 1 回だけ送信されます。複数ワーカーを立てる構成ではワーカー毎に送信される可能性があるため注意してください (必要なら外部ストレージ/DBで排他制御してください)。
 # What is this?
 
 The github.dev web-based editor is a lightweight editing experience that runs entirely in your browser. You can navigate files and source code repositories from GitHub, and make and commit code changes.
