@@ -1,0 +1,51 @@
+name: CI and Auto-Approve PR
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt || true; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt || true; fi
+      - name: Run tests
+        run: |
+          PYTHONPATH=${{ github.workspace }} pytest -q
+
+  approve:
+    needs: test
+    if: ${{ needs.test.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve pull request
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.AUTO_APPROVE_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request
+            if (!pr) {
+              console.log('No pull request found in context. Skipping approval.');
+            } else {
+              await github.pulls.createReview({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                event: 'APPROVE',
+                body: 'Auto-approved by CI: tests passed.'
+              })
+              console.log(`Approved PR #${pr.number}`)
+            }

@@ -1,5 +1,5 @@
 import types
-from zukan_flex import create_pokemon_zukan_flex_dict
+from src.zukan_flex import create_pokemon_zukan_flex_dict
 
 class DummyFlex:
     def __init__(self, alt_text, contents):

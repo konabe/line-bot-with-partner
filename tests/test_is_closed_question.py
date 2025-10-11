@@ -1,5 +1,5 @@
 import pytest
-from umigame import is_closed_question
+from src.umigame import is_closed_question
 
 
 @pytest.mark.parametrize('text,expected', [

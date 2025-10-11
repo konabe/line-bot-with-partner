@@ -1,5 +1,5 @@
 import pytest
-from app import app
+from src.app import app
 
 def test_health():
     with app.test_client() as client:

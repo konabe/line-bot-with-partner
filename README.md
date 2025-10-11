@@ -1,6 +1,31 @@
 # LINE Bot (Python) minimal template
 
 Flask + line-bot-sdk を使った最小の echo Bot テンプレートです。
+## Developer notes: src/ layout
+
+This repository now uses a `src/` layout: the actual application code lives under the `src/` package (for example `src/app.py`, `src/umigame.py`, `src/openai_helpers.py`, etc.).
+
+To run tests locally (recommended):
+
+```bash
+# from repository root
+PYTHONPATH=$(pwd) pytest -q
+```
+
+Or alternatively install the package in editable mode if you add a packaging manifest (not provided by default):
+
+```bash
+python -m pip install -e .
+pytest -q
+```
+
+Top-level shim modules were removed; tests and CI were adjusted to import from `src.*` directly. CI already sets `PYTHONPATH` before running tests.
+## 起動通知機能 (Startup Notify)
+
+サーバー起動時に LINE (push) で起動完了メッセージを受け取りたい場合、以下の環境変数を設定します。
+# LINE Bot (Python) minimal template
+
+Flask + line-bot-sdk を使った最小の echo Bot テンプレートです。
 
 準備:
 
