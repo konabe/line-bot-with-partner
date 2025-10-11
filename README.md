@@ -1,3 +1,14 @@
+# LINE Bot (Python) minimal template
+
+Flask + line-bot-sdk を使った最小の echo Bot テンプレートです。
+
+準備:
+
+1. `.env.example` をコピーして環境変数を設定してください。
+2. 依存をインストール: `pip install -r requirements.txt`
+3. ローカルで実行: `python app.py`
+
+Webhook を動かすには public URL が必要です（ngrok 等を使用）。
 # What is this?
 
 The github.dev web-based editor is a lightweight editing experience that runs entirely in your browser. You can navigate files and source code repositories from GitHub, and make and commit code changes.
