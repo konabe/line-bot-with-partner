@@ -5,6 +5,6 @@ WORKDIR /app
 RUN pip install uv
 COPY requirements.txt ./
 # BuildKitのキャッシュ活用（uvはpip互換キャッシュを利用）
-RUN --mount=type=cache,target=/root/.cache/pip uv pip install -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip uv pip install -r requirements.txt --system
 COPY . .
 CMD ["python", "app.py"]
