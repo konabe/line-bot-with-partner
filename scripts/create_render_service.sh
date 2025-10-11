@@ -49,11 +49,13 @@ if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
   exit 0
 fi
 
-# Build payload using Render API expected fields. If the API schema changes, update accordingly.
-PAYLOAD=$(cat <<JSON
+# Build payload into a temporary file. Include ownerId if provided; otherwise try to discover it.
+PAYLOAD_FILE=$(mktemp)
+cat > "$PAYLOAD_FILE" <<JSON
 {
   "name": "$SERVICE_NAME",
   "serviceType": "web",
+  "ownerId": "${OWNER_ID:-}",
   "repo": "$REPO_URL",
   "branch": "$BRANCH",
   "plan": "$PLAN",
@@ -61,12 +63,26 @@ PAYLOAD=$(cat <<JSON
   "autoDeploy": true
 }
 JSON
-)
 
-# Save payload to a temporary file to avoid shell interpolation issues when
-# sending with curl. Also validate JSON if jq is available.
-PAYLOAD_FILE=$(mktemp)
-printf '%s' "$PAYLOAD" > "$PAYLOAD_FILE"
+# If OWNER_ID not provided, try to discover via Render API
+if [ -z "${OWNER_ID:-}" ]; then
+  echo "OWNER_ID not set — querying Render API for owners..."
+  OWNERS_JSON=$(curl -sS -H "$AUTH_HEADER" -H "Accept: application/json" https://api.render.com/v1/owners) || true
+  if [ -n "$OWNERS_JSON" ] && command -v jq >/dev/null 2>&1; then
+    DISCOVERED_OWNER=$(echo "$OWNERS_JSON" | jq -r '.[0].id // .[0].ownerId // empty') || true
+    if [ -n "$DISCOVERED_OWNER" ]; then
+      OWNER_ID="$DISCOVERED_OWNER"
+      echo "Discovered ownerId: $OWNER_ID"
+      jq --arg ownerId "$OWNER_ID" '.ownerId=$ownerId' "$PAYLOAD_FILE" > "$PAYLOAD_FILE.tmp" && mv "$PAYLOAD_FILE.tmp" "$PAYLOAD_FILE" || true
+    else
+      echo "Could not discover ownerId via API. Please set OWNER_ID env var to your account/team id." >&2
+    fi
+  else
+    echo "Could not query owners (jq not available or empty response). Please set OWNER_ID env var manually." >&2
+  fi
+fi
+
+# Validate JSON payload if jq available
 if command -v jq >/dev/null 2>&1; then
   if ! jq empty "$PAYLOAD_FILE" 2>/dev/null; then
     echo "ERROR: Generated payload is not valid JSON" >&2
@@ -80,9 +96,9 @@ fi
 # Show payload for review
 echo "\n=== Request payload ==="
 if command -v jq >/dev/null 2>&1; then
-  echo "$PAYLOAD" | jq .
+  jq . "$PAYLOAD_FILE"
 else
-  echo "$PAYLOAD"
+  cat "$PAYLOAD_FILE"
 fi
 
 echo "\nSending request to Render API..."
@@ -99,8 +115,6 @@ HTTP_CODE=$(curl $CURL_OPTS -o "$TMPBODY" -w "%{http_code}" -X POST "$API_ENDPOI
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   --data-binary "@$PAYLOAD_FILE" ) || true
-
-rm -f "$PAYLOAD_FILE"
 
 echo "HTTP $HTTP_CODE"
 if [ -s "$TMPBODY" ]; then
@@ -124,10 +138,70 @@ if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
   fi
   echo "Service create request succeeded."
 else
+  # If server responded with invalid JSON, try alternative payload shapes
+  BODY_CONTENT=$(cat "$TMPBODY") || true
+  if echo "$BODY_CONTENT" | grep -qi "invalid json"; then
+    echo "Server returned 'invalid JSON'. Trying alternative payload shapes..."
+    # Fallback 1: use 'type' and 'env' fields
+    FALLBACK1_FILE=$(mktemp)
+    cat <<JSON > "$FALLBACK1_FILE"
+{
+  "name": "$SERVICE_NAME",
+  "type": "web",
+  "repo": "$REPO_URL",
+  "branch": "$BRANCH",
+  "plan": "$PLAN",
+  "env": "docker",
+  "autoDeploy": true
+}
+JSON
+    echo "\n=== Fallback payload 1 ==="
+    if command -v jq >/dev/null 2>&1; then jq . "$FALLBACK1_FILE"; else cat "$FALLBACK1_FILE"; fi
+    HTTP_CODE_FB1=$(curl $CURL_OPTS -o "$TMPBODY" -w "%{http_code}" -X POST "$API_ENDPOINT" \
+      -H "$AUTH_HEADER" -H "Content-Type: application/json" -H "Accept: application/json" --data-binary "@$FALLBACK1_FILE" ) || true
+    echo "HTTP $HTTP_CODE_FB1"
+    if [ "$HTTP_CODE_FB1" -ge 200 ] && [ "$HTTP_CODE_FB1" -lt 300 ]; then
+      if command -v jq >/dev/null 2>&1; then SERVICE_ID=$(cat "$TMPBODY" | jq -r '.id // empty') || true; fi
+      echo "Fallback 1 succeeded. Service id: ${SERVICE_ID:-(unknown)}"
+      rm -f "$FALLBACK1_FILE"
+      rm -f "$PAYLOAD_FILE"
+      exit 0
+    fi
+    rm -f "$FALLBACK1_FILE"
+
+    # Fallback 2: another variant
+    FALLBACK2_FILE=$(mktemp)
+    cat <<JSON > "$FALLBACK2_FILE"
+{
+  "name": "$SERVICE_NAME",
+  "service": "web",
+  "repo": "$REPO_URL",
+  "branch": "$BRANCH",
+  "plan": "$PLAN",
+  "env": "docker",
+  "autoDeploy": true
+}
+JSON
+    echo "\n=== Fallback payload 2 ==="
+    if command -v jq >/dev/null 2>&1; then jq . "$FALLBACK2_FILE"; else cat "$FALLBACK2_FILE"; fi
+    HTTP_CODE_FB2=$(curl $CURL_OPTS -o "$TMPBODY" -w "%{http_code}" -X POST "$API_ENDPOINT" \
+      -H "$AUTH_HEADER" -H "Content-Type: application/json" -H "Accept: application/json" --data-binary "@$FALLBACK2_FILE" ) || true
+    echo "HTTP $HTTP_CODE_FB2"
+    if [ "$HTTP_CODE_FB2" -ge 200 ] && [ "$HTTP_CODE_FB2" -lt 300 ]; then
+      if command -v jq >/dev/null 2>&1; then SERVICE_ID=$(cat "$TMPBODY" | jq -r '.id // empty') || true; fi
+      echo "Fallback 2 succeeded. Service id: ${SERVICE_ID:-(unknown)}"
+      rm -f "$FALLBACK2_FILE"
+      rm -f "$PAYLOAD_FILE"
+      exit 0
+    fi
+    rm -f "$FALLBACK2_FILE"
+  fi
+
   echo "Service creation failed. Check the API response above and Render API docs: https://render.com/docs/api"
 fi
 
 rm -f "$TMPBODY"
+rm -f "$PAYLOAD_FILE"
 
 # Notes for user
 cat <<NOTES
