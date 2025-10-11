@@ -42,48 +42,62 @@ if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
   exit 0
 fi
 
-# Build payload. Note: Render's API fields may change; inspect API docs if this fails:
+# Build payload using Render API expected fields. If the API schema changes, update accordingly.
 PAYLOAD=$(cat <<JSON
 {
   "name": "$SERVICE_NAME",
-  "service": "docker", 
-  "type": "web",
+  "serviceType": "web",
   "repo": "$REPO_URL",
   "branch": "$BRANCH",
   "plan": "$PLAN",
-  "autoDeploy": true,
-  "envVars": [
-    {"key": "PORT", "value": "$PORT"},
-    {"key": "LINE_CHANNEL_SECRET", "value": "", "sync": false},
-    {"key": "LINE_CHANNEL_ACCESS_TOKEN", "value": "", "sync": false}
-  ]
+  "runtime": "docker",
+  "autoDeploy": true
 }
 JSON
 )
 
 # Show payload for review
 echo "\n=== Request payload ==="
-echo "$PAYLOAD" | jq . || echo "$PAYLOAD"
+if command -v jq >/dev/null 2>&1; then
+  echo "$PAYLOAD" | jq .
+else
+  echo "$PAYLOAD"
+fi
 
 echo "\nSending request to Render API..."
-HTTP_RESPONSE=$(curl -sS -w "\n%{http_code}" -X POST "$API_ENDPOINT" \
+# Use a temp file for body to safely separate http code
+TMPBODY=$(mktemp)
+HTTP_CODE=$(curl -sS -o "$TMPBODY" -w "%{http_code}" -X POST "$API_ENDPOINT" \
   -H "$AUTH_HEADER" \
   -H "Content-Type: application/json" \
-  -d "$PAYLOAD") || true
-
-HTTP_BODY=$(echo "$HTTP_RESPONSE" | sed -n '1,$p' | sed -n '1,$p' | sed -e '$d')
-HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -n1)
+  -d "$PAYLOAD" ) || true
 
 echo "HTTP $HTTP_CODE"
-if [ "$HTTP_BODY" != "" ]; then
-  echo "$HTTP_BODY" | jq . || echo "$HTTP_BODY"
+if [ -s "$TMPBODY" ]; then
+  if command -v jq >/dev/null 2>&1; then
+    cat "$TMPBODY" | jq . || cat "$TMPBODY"
+  else
+    cat "$TMPBODY"
+  fi
+else
+  echo "(no response body)"
 fi
 
 if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-  echo "Service created successfully (or request accepted)."
+  # Try to extract id if jq available
+  if command -v jq >/dev/null 2>&1; then
+    SERVICE_ID=$(cat "$TMPBODY" | jq -r '.id // empty') || true
+    if [ -n "$SERVICE_ID" ]; then
+      echo "Service created with id: $SERVICE_ID"
+      echo "You can now set env vars with: SERVICE_ID=$SERVICE_ID RENDER_API_KEY=... ./scripts/render_set_env_vars.sh"
+    fi
+  fi
+  echo "Service create request succeeded."
 else
-  echo "Service creation failed. Check the API response above and Render API docs."
+  echo "Service creation failed. Check the API response above and Render API docs: https://render.com/docs/api"
 fi
+
+rm -f "$TMPBODY"
 
 # Notes for user
 cat <<NOTES
