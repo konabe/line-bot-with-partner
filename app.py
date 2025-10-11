@@ -44,6 +44,13 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     text = event.message.text
+    # ポケモン名出力機能
+    if text.strip() == 'ポケモン':
+        pokemon_name = get_random_pokemon_name()
+        reply = f"今日のポケモン: {pokemon_name}"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
+
     # じゃんけん絵文字判定
     JANKEN_EMOJIS = {'✊': 'グー', '✌️': 'チョキ', '✋': 'パー'}
     if text in JANKEN_EMOJIS:
@@ -55,6 +62,33 @@ def handle_message(event):
         reply = f"あなた: {user_hand}\nBot: {bot_hand}\n結果: {result}"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
         return
+# pokeapiからランダムなポケモン名を取得
+def get_random_pokemon_name():
+    import random
+    import requests
+    try:
+        # ポケモン総数を取得
+        resp = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1')
+        resp.raise_for_status()
+        # 総数はcountに入っている
+        count = resp.json().get('count', 1000)
+        # 1〜countのランダムなID
+        poke_id = random.randint(1, count)
+        resp2 = requests.get(f'https://pokeapi.co/api/v2/pokemon/{poke_id}')
+        resp2.raise_for_status()
+        name = resp2.json().get('name', '不明')
+        # 日本語名取得（speciesエンドポイント）
+        species_url = resp2.json().get('species', {}).get('url')
+        if species_url:
+            resp3 = requests.get(species_url)
+            resp3.raise_for_status()
+            names = resp3.json().get('names', [])
+            for n in names:
+                if n.get('language', {}).get('name') == 'ja':
+                    return n.get('name')
+        return name
+    except Exception:
+        return '取得失敗'
 
     # キーワード: 博多の天気 (ゆるいマッチ: 空白差異/末尾句読点などを考慮)
     normalized = text.strip().replace('　', ' ')
