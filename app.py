@@ -277,19 +277,22 @@ def create_pokemon_zukan_flex(info):
 
     types_box = FlexBox(layout="baseline", contents=type_items)
 
-    # Evolution info
+    # Evolution info placed in footer for better visibility under image
+    from linebot.v3.messaging.models import FlexFooter
     evo = FlexText(text=f"進化: {evolution}", size="sm", color="#666666", align="center")
-
-    # Avoid duplicating the image: use hero only for the main image
-    body = FlexBox(layout="vertical", contents=[
-        header,
-        FlexSeparator(margin="md"),
+    footer = FlexBox(layout="vertical", contents=[
         types_box,
         FlexSeparator(margin="sm"),
         evo
     ])
 
-    bubble = FlexBubble(hero=hero, body=body)
+    # Avoid duplicating the image: use hero only for the main image
+    body = FlexBox(layout="vertical", contents=[
+        header,
+        FlexSeparator(margin="md")
+    ])
+
+    bubble = FlexBubble(hero=hero, body=body, footer=footer)
     return FlexMessage(alt_text=f"ポケモン図鑑: {name}", contents=bubble)
 
     # じゃんけん絵文字判定
