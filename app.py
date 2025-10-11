@@ -201,7 +201,20 @@ def get_random_pokemon_zukan_info():
         resp = requests.get('https://pokeapi.co/api/v2/pokemon?limit=1')
         resp.raise_for_status()
         count = resp.json().get('count', 1000)
-        poke_id = random.randint(1, count)
+        # Allow overriding the upper bound of zukan numbers via env var POKEMON_ZUKAN_MAX
+        max_env = os.environ.get('POKEMON_ZUKAN_MAX')
+        max_id = count
+        if max_env:
+            try:
+                max_env_int = int(max_env)
+                if max_env_int > 0:
+                    max_id = min(count, max_env_int)
+                    logger.debug(f"POKEMON_ZUKAN_MAX applied: using max_id={max_id} (count={count})")
+                else:
+                    logger.warning(f"POKEMON_ZUKAN_MAX is not >0: {max_env_int}; ignoring")
+            except Exception:
+                logger.warning(f"Invalid POKEMON_ZUKAN_MAX value: {max_env}; ignoring")
+        poke_id = random.randint(1, max_id)
         resp2 = requests.get(f'https://pokeapi.co/api/v2/pokemon/{poke_id}')
         resp2.raise_for_status()
         name = resp2.json().get('name', '不明')
