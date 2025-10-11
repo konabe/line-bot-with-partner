@@ -63,6 +63,20 @@ PAYLOAD=$(cat <<JSON
 JSON
 )
 
+# Save payload to a temporary file to avoid shell interpolation issues when
+# sending with curl. Also validate JSON if jq is available.
+PAYLOAD_FILE=$(mktemp)
+printf '%s' "$PAYLOAD" > "$PAYLOAD_FILE"
+if command -v jq >/dev/null 2>&1; then
+  if ! jq empty "$PAYLOAD_FILE" 2>/dev/null; then
+    echo "ERROR: Generated payload is not valid JSON" >&2
+    echo "Payload was:" >&2
+    cat "$PAYLOAD_FILE" >&2
+    rm -f "$PAYLOAD_FILE"
+    exit 1
+  fi
+fi
+
 # Show payload for review
 echo "\n=== Request payload ==="
 if command -v jq >/dev/null 2>&1; then
@@ -83,7 +97,10 @@ fi
 HTTP_CODE=$(curl $CURL_OPTS -o "$TMPBODY" -w "%{http_code}" -X POST "$API_ENDPOINT" \
   -H "$AUTH_HEADER" \
   -H "Content-Type: application/json" \
-  -d "$PAYLOAD" ) || true
+  -H "Accept: application/json" \
+  --data-binary "@$PAYLOAD_FILE" ) || true
+
+rm -f "$PAYLOAD_FILE"
 
 echo "HTTP $HTTP_CODE"
 if [ -s "$TMPBODY" ]; then
