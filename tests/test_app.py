@@ -9,6 +9,8 @@ from app import (
     extract_location_from_weather_query,
     geocode_location,
     get_location_weather_text,
+    detect_janken_hand,
+    play_janken,
 )
 
 
@@ -124,3 +126,78 @@ def test_get_location_weather_text_weather_fail(monkeypatch):
     with patch('app.requests.get', side_effect=fake_get):
         text = get_location_weather_text('X市')
         assert '取得できません' in text or 'できません' in text
+
+
+# ---- Janken (Rock-Paper-Scissors) Tests -----------------------------------
+
+
+def test_detect_janken_hand_emoji():
+    """絵文字でのじゃんけん手の検出"""
+    assert detect_janken_hand('✊') == 'rock'
+    assert detect_janken_hand('✋') == 'paper'
+    assert detect_janken_hand('✌') == 'scissors'
+    assert detect_janken_hand('✌️') == 'scissors'
+
+
+def test_detect_janken_hand_japanese():
+    """日本語でのじゃんけん手の検出"""
+    assert detect_janken_hand('グー') == 'rock'
+    assert detect_janken_hand('ぐー') == 'rock'
+    assert detect_janken_hand('パー') == 'paper'
+    assert detect_janken_hand('ぱー') == 'paper'
+    assert detect_janken_hand('チョキ') == 'scissors'
+    assert detect_janken_hand('ちょき') == 'scissors'
+
+
+def test_detect_janken_hand_mixed():
+    """絵文字と日本語が混在している場合"""
+    assert detect_janken_hand('✊ グー') == 'rock'
+    assert detect_janken_hand('じゃんけん ✋') == 'paper'
+    assert detect_janken_hand('✌️でいくよ') == 'scissors'
+
+
+def test_detect_janken_hand_none():
+    """じゃんけんの手が検出されない場合"""
+    assert detect_janken_hand('こんにちは') is None
+    assert detect_janken_hand('天気') is None
+    assert detect_janken_hand('') is None
+
+
+def test_play_janken_returns_none_for_non_janken():
+    """じゃんけんでないテキストの場合はNoneを返す"""
+    assert play_janken('こんにちは') is None
+    assert play_janken('東京の天気') is None
+
+
+def test_play_janken_returns_result():
+    """じゃんけんの結果が返される"""
+    result = play_janken('✊')
+    assert result is not None
+    assert 'あなた:' in result
+    assert 'Bot:' in result
+    assert ('あいこ' in result or 'あなたの勝ち！' in result or 'あなたの負け...' in result)
+
+
+def test_play_janken_contains_emojis():
+    """結果に絵文字が含まれている"""
+    result = play_janken('グー')
+    assert result is not None
+    # 結果に絵文字が含まれている
+    assert '✊' in result or '✋' in result or '✌️' in result
+
+
+def test_play_janken_deterministic_with_seed(monkeypatch):
+    """ランダム性をモックして勝敗を確認"""
+    # ボットが常にrock(✊)を出すようにモック
+    with patch('app.random.choice', return_value='rock'):
+        # ユーザーがrock -> あいこ
+        result = play_janken('✊')
+        assert 'あいこ' in result
+        
+        # ユーザーがpaper -> 勝ち
+        result = play_janken('✋')
+        assert 'あなたの勝ち！' in result
+        
+        # ユーザーがscissors -> 負け
+        result = play_janken('✌️')
+        assert 'あなたの負け...' in result

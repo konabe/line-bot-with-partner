@@ -9,6 +9,7 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import re
 from functools import lru_cache
+import random
 
 load_dotenv()
 
@@ -41,11 +42,84 @@ def callback():
     return 'OK', 200
 
 
+# ---- Rock-Paper-Scissors (Janken) -----------------------------------------
+
+
+def detect_janken_hand(text: str):
+    """ユーザーのメッセージからじゃんけんの手を検出する。
+    
+    Returns: 'rock', 'paper', 'scissors', or None
+    """
+    text = text.strip()
+    
+    # グー (rock)
+    if '✊' in text or 'グー' in text or 'ぐー' in text:
+        return 'rock'
+    
+    # パー (paper)
+    if '✋' in text or 'パー' in text or 'ぱー' in text:
+        return 'paper'
+    
+    # チョキ (scissors)
+    if '✌' in text or '✌️' in text or 'チョキ' in text or 'ちょき' in text:
+        return 'scissors'
+    
+    return None
+
+
+def play_janken(user_text: str):
+    """じゃんけんゲームを実行する。
+    
+    Returns: 結果メッセージ or None (じゃんけんでない場合)
+    """
+    user_hand = detect_janken_hand(user_text)
+    if not user_hand:
+        return None
+    
+    # ボットの手をランダムに選択
+    hands = ['rock', 'paper', 'scissors']
+    bot_hand = random.choice(hands)
+    
+    # 絵文字とテキストのマッピング
+    hand_to_emoji = {
+        'rock': '✊',
+        'paper': '✋',
+        'scissors': '✌️'
+    }
+    hand_to_japanese = {
+        'rock': 'グー',
+        'paper': 'パー',
+        'scissors': 'チョキ'
+    }
+    
+    # 勝敗判定
+    if user_hand == bot_hand:
+        result = 'あいこ'
+    elif (user_hand == 'rock' and bot_hand == 'scissors') or \
+         (user_hand == 'paper' and bot_hand == 'rock') or \
+         (user_hand == 'scissors' and bot_hand == 'paper'):
+        result = 'あなたの勝ち！'
+    else:
+        result = 'あなたの負け...'
+    
+    user_display = f"{hand_to_emoji[user_hand]} {hand_to_japanese[user_hand]}"
+    bot_display = f"{hand_to_emoji[bot_hand]} {hand_to_japanese[bot_hand]}"
+    
+    return f"あなた: {user_display}\nBot: {bot_display}\n\n{result}"
+
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     text = event.message.text
     # キーワード: 博多の天気 (ゆるいマッチ: 空白差異/末尾句読点などを考慮)
     normalized = text.strip().replace('　', ' ')
+    
+    # じゃんけん対応
+    janken_result = play_janken(text)
+    if janken_result:
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=janken_result))
+        return
+    
     # 汎用『◯◯の天気』対応
     loc = extract_location_from_weather_query(normalized)
     if loc:
