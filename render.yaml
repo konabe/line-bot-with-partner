@@ -2,7 +2,6 @@ services:
   - type: web
     name: mcp-server
     runtime: docker
-  plan: starter
     autoDeploy: true
     envVars:
       - key: LINE_CHANNEL_SECRET
