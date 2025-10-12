@@ -32,6 +32,8 @@ class LineMessagingAdapter(MessagingPort):
             self.messaging_api.reply_message(reply_message_request)
         except Exception as e:
             logger.error(f"Error when calling messaging_api.reply_message: {e}")
+            # re-raise so caller (safe_reply_message) can react (e.g. fallback to push)
+            raise
 
     def push_message(self, push_message_request):
         if self.messaging_api is None:
@@ -45,3 +47,4 @@ class LineMessagingAdapter(MessagingPort):
             self.messaging_api.push_message(push_message_request)
         except Exception as e:
             logger.error(f"Error when calling messaging_api.push_message: {e}")
+            raise

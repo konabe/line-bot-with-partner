@@ -41,6 +41,24 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
             return {'error': 'unable to serialize flex'}, 500
 
 
+    def get_fallback_destination(event):
+        """Return a destination id for push fallback: prefer userId, then groupId, then roomId."""
+        try:
+            src = getattr(event, 'source', None)
+            if not src:
+                return None
+            return (
+                getattr(src, 'user_id', None)
+                or getattr(src, 'userId', None)
+                or getattr(src, 'group_id', None)
+                or getattr(src, 'groupId', None)
+                or getattr(src, 'room_id', None)
+                or getattr(src, 'roomId', None)
+            )
+        except Exception:
+            return None
+
+
     @app.route('/health', methods=['GET'])
     def health():
         logger.debug("/health endpoint called")
@@ -60,7 +78,6 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
             # 署名不正時はLINEユーザーへ障害通知（reply_token取得可能な場合のみ）
             try:
                 import json
-                event = None
                 # bodyからreply_token抽出
                 data = json.loads(body)
                 for ev in data.get('events', []):
@@ -71,7 +88,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                             reply_token=reply_token,
                             messages=[TextMessage(text='署名検証に失敗しました。管理者に連絡してください。')]
                         )
-                        safe_reply_message(reply_message_request)
+                        safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(ev))
             except Exception as ex:
                 logger.error(f"障害通知送信失敗: {ex}")
             abort(400)
@@ -80,7 +97,6 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
             # その他例外時も障害通知
             try:
                 import json
-                event = None
                 data = json.loads(body)
                 for ev in data.get('events', []):
                     reply_token = ev.get('replyToken')
@@ -90,7 +106,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                             reply_token=reply_token,
                             messages=[TextMessage(text='現在障害が発生しています。管理者に連絡してください。')]
                         )
-                        safe_reply_message(reply_message_request)
+                        safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(ev))
             except Exception as ex:
                 logger.error(f"障害通知送信失敗: {ex}")
             abort(500)
@@ -127,7 +143,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                     " 終了: 「ウミガメのスープ終了」"
                 ))]
             )
-            safe_reply_message(reply_message_request)
+            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             return
 
         if text.strip() == 'ウミガメのスープ終了':
@@ -138,7 +154,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                 reply_token=event.reply_token,
                 messages=[TextMessage(text='ウミガメのスープモードを終了しました。')]
             )
-            safe_reply_message(reply_message_request)
+            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             return
 
         if user_id and UMIGAME_STATE.get(user_id):
@@ -157,7 +173,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                     reply_token=event.reply_token,
                     messages=[TextMessage(text='申し訳ないです。OpenAI の呼び出しに失敗しました。管理者に OPENAI_API_KEY の設定を確認してください。')]
                 )
-                safe_reply_message(reply_message_request)
+                safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
                 return
             cleared = False
             if answer.startswith('はい') or answer.startswith('はい、'):
@@ -167,7 +183,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                 reply_token=event.reply_token,
                 messages=[TextMessage(text=answer)]
             )
-            safe_reply_message(reply_message_request)
+            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             if cleared and user_id:
                 UMIGAME_STATE.pop(user_id, None)
                 try:
@@ -207,22 +223,21 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
             except Exception as e:
                 logger.error(f"日時文字列作成に失敗: {e}")
                 now_str = '取得できませんでした'
-            from linebot.v3.messaging.models import PushMessageRequest, TextMessage
-            push_message_request = PushMessageRequest(
-                to=user_id,
-                messages=[TextMessage(text=f"現在の日時: {now_str}")]
+            from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+            messages = [TextMessage(text=answer)]
+            if cleared and user_id:
+                # clear state and append congrats message so we only use reply_token once
+                UMIGAME_STATE.pop(user_id, None)
+                messages.append(TextMessage(text='おめでとうございます。核心に迫る質問が来たためウミガメのスープモードを終了します。'))
+            reply_message_request = ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=messages
             )
-            safe_push_message(push_message_request)
             try:
-                from linebot.v3.messaging.models import ReplyMessageRequest
-                reply_message_request = ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text="直接送信を行いました。")]
-                )
-                safe_reply_message(reply_message_request)
+                safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             except Exception:
-                pass
-            return
+                # safe_reply_message should not raise, but be defensive
+                logger.exception('failed to send umigame reply')
 
         if '天気' in text:
             logger.info("天気リクエスト検出")
@@ -238,7 +253,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                 reply_token=event.reply_token,
                 messages=[TextMessage(text=reply_text)]
             )
-            safe_reply_message(reply_message_request)
+            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             return
 
         if text.strip() == 'じゃんけん':
@@ -260,7 +275,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                 reply_token=event.reply_token,
                 messages=[template]
             )
-            safe_reply_message(reply_message_request)
+            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             return
 
         if text.strip() == '今日のご飯':
@@ -285,7 +300,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                     reply_token=event.reply_token,
                     messages=[TextMessage(text=suggestion)]
                 )
-            safe_reply_message(reply_message_request)
+            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             return
 
         if text.strip() == 'ポケモン':
@@ -298,14 +313,14 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                     reply_token=event.reply_token,
                     messages=[flex]
                 )
-                safe_reply_message(reply_message_request)
+                safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             else:
                 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
                 reply_message_request = ReplyMessageRequest(
                     reply_token=event.reply_token,
                     messages=[TextMessage(text="ポケモン図鑑情報の取得に失敗しました。")]
                 )
-                safe_reply_message(reply_message_request)
+                safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             return
 
 
@@ -325,7 +340,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
                 reply_token=event.reply_token,
                 messages=[TextMessage(text=reply)]
             )
-            safe_reply_message(reply_message_request)
+            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
 
 
     # attach handlers to the provided WebhookHandler
@@ -536,7 +551,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
 
 
     def extract_location_from_weather_query(text: str):
-        t = re.sub(r'[\u3000]', ' ', text)
+        t = text.replace('　', ' ')
         m = re.search(r'(.+?)の天気', t)
         if not m:
             return None

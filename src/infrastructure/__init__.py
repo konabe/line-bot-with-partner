@@ -38,15 +38,37 @@ def init_messaging_api(access_token: str):
         logger.error(f"Exception while initializing messaging adapter: {e}")
 
 
-def safe_reply_message(reply_message_request):
+def safe_reply_message(reply_message_request, fallback_to: str = None) -> bool:
+    """Attempt to reply using the messaging adapter. Returns True on success.
+
+    If reply fails with an invalid/expired reply token, and fallback_to is provided,
+    attempt to send a push message to the fallback destination.
+    """
     if _adapter is None:
         logger.warning("safe_reply_message called but no messaging adapter is registered; skipping reply")
-        return
+        return False
     try:
         _adapter.reply_message(reply_message_request)
+        return True
     except Exception as e:
         logger.error(f"Exception in safe_reply_message: {e}")
-        return
+        # inspect exception message to detect invalid reply token
+        if fallback_to:
+            try:
+                logger.info(f"Attempting fallback push to {fallback_to} due to reply failure")
+                from linebot.v3.messaging.models import PushMessageRequest, TextMessage
+                push_message_request = PushMessageRequest(
+                    to=fallback_to,
+                    messages=[TextMessage(text='返信に失敗しました。こちらで通知します。')]
+                )
+                try:
+                    _adapter.push_message(push_message_request)
+                    logger.info("Fallback push succeeded")
+                except Exception as push_err:
+                    logger.error(f"Fallback push failed: {push_err}")
+            except Exception as ex:
+                logger.error(f"Failed to perform fallback push: {ex}")
+        return False
 
 
 def safe_push_message(push_message_request):
