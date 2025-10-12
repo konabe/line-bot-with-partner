@@ -9,5 +9,7 @@ RUN --mount=type=cache,target=/root/.cache/pip uv pip install -r requirements.tx
 COPY . .
 ENV PYTHONPATH=/app
 ENV PORT=8080
-# run with gunicorn WSGI server in production
-CMD exec gunicorn --bind 0.0.0.0:${PORT} --workers 2 --threads 4 --timeout 30 "src.app:app"
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+# run start script which execs gunicorn
+CMD ["/start.sh"]
