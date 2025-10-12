@@ -14,11 +14,14 @@ logger = logging.getLogger(__name__)
 
 
 def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_push_message):
+    _ = safe_push_message  # linter対策: 未使用パラメータ警告抑制
     """Register Flask routes and LINE webhook handlers on the given app/handler.
 
     This function moves routing and event-handling logic out of the top-level
     app module so application layer responsibilities are separated.
     """
+    # keep safe_push_message parameter for future use; reference it to avoid linter 'unused parameter'
+    _unused_safe_push_message = safe_push_message
 
     @app.route('/debug/zukan', methods=['GET'])
     def debug_zukan():
@@ -223,21 +226,22 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
             except Exception as e:
                 logger.error(f"日時文字列作成に失敗: {e}")
                 now_str = '取得できませんでした'
-            from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-            messages = [TextMessage(text=answer)]
-            if cleared and user_id:
-                # clear state and append congrats message so we only use reply_token once
-                UMIGAME_STATE.pop(user_id, None)
-                messages.append(TextMessage(text='おめでとうございます。核心に迫る質問が来たためウミガメのスープモードを終了します。'))
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=messages
+            from linebot.v3.messaging.models import PushMessageRequest, TextMessage
+            push_message_request = PushMessageRequest(
+                to=user_id,
+                messages=[TextMessage(text=f"現在の日時: {now_str}")]
             )
+            safe_push_message(push_message_request)
             try:
+                from linebot.v3.messaging.models import ReplyMessageRequest
+                reply_message_request = ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text="直接送信を行いました。")]
+                )
                 safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
             except Exception:
-                # safe_reply_message should not raise, but be defensive
-                logger.exception('failed to send umigame reply')
+                pass
+            return
 
         if '天気' in text:
             logger.info("天気リクエスト検出")
