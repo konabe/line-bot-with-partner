@@ -1,4 +1,4 @@
-from src.zukan_flex import create_pokemon_zukan_flex_dict
+from src.infrastructure.line_model import create_pokemon_zukan_flex_dict
 
 def test_create_pokemon_zukan_flex_dict():
     info = {
