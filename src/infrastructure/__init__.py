@@ -17,54 +17,13 @@ _adapter: Optional[MessagingPort] = None
 
 # throttle state for fallback push: track last push time per destination
 # protects against rapidly repeated fallback pushes (e.g. when reply_token invalid)
-_last_fallback_push: dict[str, float] = {}
-_fallback_lock = threading.Lock()
-# cooldown in seconds (can be overridden with env var)
-try:
-    _FALLBACK_PUSH_COOLDOWN_SECONDS = int(os.environ.get('FALLBACK_PUSH_COOLDOWN_SECONDS', '60'))
-except Exception:
-    _FALLBACK_PUSH_COOLDOWN_SECONDS = 60
+# (以前はフォールバックプッシュのスロットリングを実装していましたが)
+# 参照されていない補助ロジックは削除しました。
 
 
 def register_adapter(adapter: MessagingPort):
     global _adapter
     _adapter = adapter
-
-
-def _perform_fallback_push(fallback_to: str):
-    """Perform a throttled fallback push to the given destination.
-
-    This function updates throttle state and attempts the push. It logs errors
-    but does not raise.
-    """
-    now = time.time()
-    should_send = True
-    try:
-        with _fallback_lock:
-            last = _last_fallback_push.get(fallback_to)
-            if last and (now - last) < _FALLBACK_PUSH_COOLDOWN_SECONDS:
-                should_send = False
-            else:
-                _last_fallback_push[fallback_to] = now
-    except Exception as ex:
-        logger.debug(f"Could not consult/update fallback push throttle state: {ex}")
-    if not should_send:
-        logger.info(f"Skipping fallback push to {fallback_to} due to cooldown")
-        return
-    try:
-        logger.info(f"Attempting fallback push to {fallback_to} due to reply failure")
-        from linebot.v3.messaging.models import PushMessageRequest, TextMessage
-        push_message_request = PushMessageRequest(
-            to=fallback_to,
-            messages=[TextMessage(text='返信に失敗しました。こちらで通知します。')]
-        )
-        try:
-            _adapter.push_message(push_message_request)
-            logger.info("Fallback push succeeded")
-        except Exception as push_err:
-            logger.error(f"Fallback push failed: {push_err}")
-    except Exception as ex:
-        logger.error(f"Failed to perform fallback push: {ex}")
 
 
 def init_messaging_api(access_token: str):
