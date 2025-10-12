@@ -57,9 +57,42 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_pus
             logger.debug("handler.handle succeeded")
         except InvalidSignatureError:
             logger.error("InvalidSignatureError: signature invalid")
+            # 署名不正時はLINEユーザーへ障害通知（reply_token取得可能な場合のみ）
+            try:
+                import json
+                event = None
+                # bodyからreply_token抽出
+                data = json.loads(body)
+                for ev in data.get('events', []):
+                    reply_token = ev.get('replyToken')
+                    if reply_token:
+                        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+                        reply_message_request = ReplyMessageRequest(
+                            reply_token=reply_token,
+                            messages=[TextMessage(text='署名検証に失敗しました。管理者に連絡してください。')]
+                        )
+                        safe_reply_message(reply_message_request)
+            except Exception as ex:
+                logger.error(f"障害通知送信失敗: {ex}")
             abort(400)
         except Exception as e:
             logger.error(f"Exception in handler.handle: {e}")
+            # その他例外時も障害通知
+            try:
+                import json
+                event = None
+                data = json.loads(body)
+                for ev in data.get('events', []):
+                    reply_token = ev.get('replyToken')
+                    if reply_token:
+                        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+                        reply_message_request = ReplyMessageRequest(
+                            reply_token=reply_token,
+                            messages=[TextMessage(text='現在障害が発生しています。管理者に連絡してください。')]
+                        )
+                        safe_reply_message(reply_message_request)
+            except Exception as ex:
+                logger.error(f"障害通知送信失敗: {ex}")
             abort(500)
         return 'OK', 200
 
