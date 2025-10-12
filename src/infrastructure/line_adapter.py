@@ -1,5 +1,4 @@
 import logging
-from . import messaging as infra_messaging
 from ..ports.messaging import MessagingPort
 
 logger = logging.getLogger(__name__)
