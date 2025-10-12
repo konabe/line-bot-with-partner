@@ -13,8 +13,8 @@ CHANNEL_SECRET = os.environ.get('LINE_CHANNEL_SECRET', '')
 CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
 
 from linebot.v3.webhook import WebhookHandler
-from .messaging import init_messaging_api
-from .infrastructure import safe_reply_message, safe_push_message
+# fix: import init_messaging_api from the infrastructure package (there is no src/messaging.py)
+from .infrastructure import init_messaging_api, safe_reply_message, safe_push_message
 from .application.handlers import register_handlers
 
 init_messaging_api(CHANNEL_ACCESS_TOKEN)
