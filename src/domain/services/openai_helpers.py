@@ -150,3 +150,41 @@ def generate_umigame_puzzle() -> dict:
     except Exception as e:
         logger.error(f"generate_umigame_puzzle error: {e}")
         raise
+
+
+def get_chatgpt_response(user_message: str) -> str:
+    """ユーザーのメッセージに対してChatGPTを使って返答を生成します。"""
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not api_key:
+        raise RuntimeError('OPENAI_API_KEY is not set')
+    model = os.environ.get('OPENAI_MODEL', 'gpt-3.5-turbo')
+    system_prompt = (
+        "あなたは親切で役立つAIアシスタントです。ユーザーのメッセージに対して、"
+        "自然で役立つ返答を日本語でしてください。質問には適切に答え、"
+        "雑談にも楽しく応じてください。"
+    )
+    headers = {
+        'Content-Type': 'application/json',
+        'Authorization': f'Bearer {api_key}'
+    }
+    payload = {
+        'model': model,
+        'messages': [
+            {'role': 'system', 'content': system_prompt},
+            {'role': 'user', 'content': user_message}
+        ],
+        'max_tokens': 500,
+        'temperature': 0.7,
+    }
+    try:
+        resp = requests.post('https://api.openai.com/v1/chat/completions', json=payload, headers=headers, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        choices = data.get('choices') or []
+        if not choices:
+            raise RuntimeError('no choices from OpenAI')
+        content = choices[0].get('message', {}).get('content')
+        return content.strip()
+    except Exception as e:
+        logger.error(f"OpenAI API error: {e}")
+        raise

@@ -220,6 +220,31 @@ def handle_message(event, safe_reply_message, get_fallback_destination):
             safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
         return
 
+    # どのコマンドにも該当しないメッセージに対してはChatGPTで応答
+    logger.info("コマンド以外のメッセージを受信: ChatGPT に問い合わせます")
+    try:
+        response = get_chatgpt_response(text)
+    except Exception as e:
+        logger.error(f"get_chatgpt_response error: {e}")
+        response = None
+    from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+    if not response:
+        msg = (
+            "申し訳ないです。応答を生成できませんでした。"
+            "管理者に OPENAI_API_KEY の設定を確認してもらってください。"
+        )
+        reply_message_request = ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessage(text=msg)]
+        )
+    else:
+        reply_message_request = ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessage(text=response)]
+        )
+    safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+    return
+
 
 def get_random_pokemon_zukan_info():
     import random
@@ -272,58 +297,15 @@ def get_random_pokemon_zukan_info():
         return None
 
 
-def create_pokemon_zukan_flex(info):
-    from linebot.v3.messaging.models import FlexBubble, FlexImage, FlexBox, FlexText, FlexSeparator
-    types = info.get('types') or []
-    zukan_no = info.get('zukan_no') or ''
-    name = info.get('name') or '不明'
-    evolution = info.get('evolution') or 'なし'
-    hero = FlexImage(
-        url=info['image_url'] or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png",
-        size="xl",
-        aspect_ratio="1:1",
-        aspect_mode="cover"
-    )
-    try:
-        z_no = int(zukan_no)
-        zukan_display = f"No.{z_no:03d}"
-    except Exception:
-        zukan_display = f"No.{zukan_no}"
-    header = FlexBox(
-        layout="vertical",
-        contents=[
-            FlexText(text=zukan_display, weight="bold", size="sm", color="#999999", align="center"),
-            FlexText(text=name, weight="bold", size="xl", align="center")
-        ]
-    )
-    type_items = []
-    for t in types:
-        color = "#666666"
-        try:
-            h = abs(hash(t))
-            palette = ["#A8A77A", "#C22E28", "#A33EA1", "#E2BF65", "#7AC74C", "#B7B7CE", "#6390F0"]
-            color = palette[h % len(palette)]
-        except Exception:
-            color = "#666666"
-        type_items.append(FlexText(text=t, size="sm", color=color, align="center"))
-    types_box = FlexBox(layout="baseline", contents=type_items)
-    evo = FlexText(text=f"進化: {evolution}", size="sm", color="#666666", align="center")
-    footer = FlexBox(layout="vertical", contents=[
-        types_box,
-        FlexSeparator(margin="sm"),
-        evo
-    ])
-    body = FlexBox(layout="vertical", contents=[
-        header,
-        FlexSeparator(margin="md")
-    ])
-    bubble = FlexBubble(hero=hero, body=body, footer=footer)
-    return FlexMessage(alt_text=f"ポケモン図鑑: {name}", contents=bubble)
-
-
 def get_chatgpt_meal_suggestion():
     from src.domain.services.openai_helpers import get_chatgpt_meal_suggestion as svc
     return svc()
+
+
+def get_chatgpt_response(user_message: str):
+    """ユーザーのメッセージに対してChatGPTを使って返答を生成します。"""
+    from src.domain.services.openai_helpers import get_chatgpt_response as svc
+    return svc(user_message)
 
 
 def get_hakata_weather_text():

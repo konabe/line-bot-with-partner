@@ -12,28 +12,6 @@ def register_routes(app, handler: WebhookHandler, safe_reply_message, safe_push_
     """アプリケーションの Flask ルートを登録します。"""
     # 一貫性のため safe_push_message パラメータを保持（ルートでは未使用）
     _ = safe_push_message
-    _ = safe_push_message
-
-    @app.route('/debug/zukan', methods=['GET'])
-    def debug_zukan():
-        from .message_handlers import create_pokemon_zukan_flex
-        name = request.args.get('name', 'ピカチュウ')
-        image_url = request.args.get('image_url', '')
-        zukan_no = request.args.get('zukan_no', '25')
-        types = request.args.get('types', 'electric').split(',') if request.args.get('types') else []
-        evolution = request.args.get('evolution', 'ピチュー → ピカチュウ → ライチュウ')
-        info = {
-            'zukan_no': zukan_no,
-            'name': name,
-            'image_url': image_url,
-            'types': types,
-            'evolution': evolution
-        }
-        flex = create_pokemon_zukan_flex(info)
-        try:
-            return flex.to_json(), 200, {'Content-Type': 'application/json; charset=utf-8'}
-        except Exception:
-            return {'error': 'unable to serialize flex'}, 500
 
     @app.route('/health', methods=['GET'])
     def health():
