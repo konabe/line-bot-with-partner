@@ -1,4 +1,4 @@
-"""Startup notification helper for sending admin push messages."""
+"""管理者へのプッシュメッセージ送信のための起動通知ヘルパー。"""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from linebot.v3.messaging.models import PushMessageRequest, TextMessage
 
 
 class _LoggerProtocol:
-    """Minimal logger protocol to satisfy type checkers at runtime."""
+    """実行時に型チェッカーを満足させるための最小ロガープロトコル。"""
 
     def debug(self, message: str):  # pragma: no cover - protocol definition
         raise NotImplementedError
@@ -25,9 +25,9 @@ def notify_startup_if_configured(
     safe_push_message: Callable[[PushMessageRequest], None],
     logger: Optional[_LoggerProtocol] = None,
 ) -> bool:
-    """Send a startup notification to the admin if ADMIN_USER_ID is set.
+    """ADMIN_USER_ID が設定されている場合、管理者に起動通知を送信します。
 
-    Returns True if a notification was attempted and succeeded, False otherwise.
+    通知が試行され成功した場合は True、そうでない場合は False を返します。
     """
     admin_id = os.environ.get("ADMIN_USER_ID")
     if not admin_id:
