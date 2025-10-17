@@ -19,7 +19,7 @@ class DomainServices(Protocol):
 def get_default_domain_services() -> DomainServices:
     """デフォルトのdomainサービスを取得（後方互換性のため）"""
     from src.domain import UMIGAME_STATE, is_closed_question, generate_umigame_puzzle
-    from src.domain.services.openai_helpers import call_openai_yesno_with_secret, get_chatgpt_meal_suggestion, get_chatgpt_response
+    from src.infrastructure.openai_helpers import call_openai_yesno_with_secret, get_chatgpt_meal_suggestion, get_chatgpt_response
 
     class DefaultDomainServices:
         def __init__(self):

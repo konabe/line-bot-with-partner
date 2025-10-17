@@ -5,7 +5,7 @@ to allow an incremental migration to a DDD layout.
 """
 
 from .umigame import UMIGAME_STATE, is_closed_question
-from .services.openai_helpers import (
+from ..infrastructure.openai_helpers import (
     get_chatgpt_meal_suggestion,
     call_openai_yesno,
     call_openai_yesno_with_secret,
