@@ -14,7 +14,7 @@ CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
 
 from linebot.v3.webhook import WebhookHandler
 from .infrastructure import init_messaging_api, safe_reply_message, safe_push_message
-from .application.handlers import register_handlers
+from .application.handler_registration import register_handlers
 from .application.startup_notify import notify_startup_if_configured
 
 init_messaging_api(CHANNEL_ACCESS_TOKEN)
