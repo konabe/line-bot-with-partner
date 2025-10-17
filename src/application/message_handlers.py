@@ -306,11 +306,3 @@ class MessageHandler:
 
 
 
-# 後方互換性のための関数（非推奨）
-def handle_message(event, safe_reply_message, get_fallback_destination, domain_services=None):
-    """LINE からのテキストメッセージイベントを処理します（後方互換性のため）。
-
-    注意: この関数は非推奨です。MessageHandlerクラスを使用してください。
-    """
-    handler = MessageHandler(safe_reply_message, get_fallback_destination, domain_services)
-    return handler.handle_message(event)
