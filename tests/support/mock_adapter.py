@@ -6,7 +6,7 @@ APIs.
 """
 from typing import Any, List
 
-from ..ports.messaging import MessagingPort
+from src.ports.messaging import MessagingPort
 
 
 class MockMessagingAdapter(MessagingPort):
@@ -14,7 +14,7 @@ class MockMessagingAdapter(MessagingPort):
 
     Usage in tests:
         from src.infrastructure import register_adapter
-        from src.infrastructure.mock_adapter import MockMessagingAdapter
+        from tests.support.mock_adapter import MockMessagingAdapter
 
         mock = MockMessagingAdapter()
         register_adapter(mock)

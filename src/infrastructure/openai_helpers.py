@@ -1,9 +1,9 @@
 import os
-import logging
 import re
 import requests
+from typing import Optional
 
-logger = logging.getLogger(__name__)
+from src.infrastructure.logger import Logger, create_logger
 
 
 class OpenAIClient:
@@ -16,8 +16,13 @@ class OpenAIClient:
     OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
     NO_CHOICES_ERROR = 'no choices from OpenAI'
 
-    def __init__(self):
-        """OpenAIClientの初期化"""
+    def __init__(self, logger: Optional[Logger] = None):
+        """OpenAIClientの初期化
+
+        Args:
+            logger: DI 可能な Logger。指定がない場合は標準のロガーを作成します。
+        """
+        self.logger = logger or create_logger(__name__)
         self.api_key = os.environ.get('OPENAI_API_KEY')
         if not self.api_key:
             raise RuntimeError(OpenAIClient.OPENAI_API_KEY_ERROR)
@@ -52,7 +57,7 @@ class OpenAIClient:
             content = choices[0].get('message', {}).get('content')
             return content
         except Exception as e:
-            logger.error(f"OpenAI API error: {e}")
+            self.logger.error(f"OpenAI API error: {e}")
             raise
 
     def call_openai_yesno(self, question: str) -> str:
@@ -81,7 +86,7 @@ class OpenAIClient:
             content = choices[0].get('message', {}).get('content', '').strip()
             return content
         except Exception as e:
-            logger.error(f"OpenAI yes/no call error: {e}")
+            self.logger.error(f"OpenAI yes/no call error: {e}")
             raise
 
     def call_openai_yesno_with_secret(self, question: str, secret: str) -> str:
@@ -111,7 +116,7 @@ class OpenAIClient:
             content = choices[0].get('message', {}).get('content', '').strip()
             return content
         except Exception as e:
-            logger.error(f"OpenAI secret yes/no call error: {e}")
+            self.logger.error(f"OpenAI secret yes/no call error: {e}")
             raise
 
     def generate_umigame_puzzle(self) -> dict:
@@ -150,7 +155,7 @@ class OpenAIClient:
                 raise RuntimeError('failed to parse puzzle')
             return {'puzzle': puzzle, 'answer': answer}
         except Exception as e:
-            logger.error(f"generate_umigame_puzzle error: {e}")
+            self.logger.error(f"generate_umigame_puzzle error: {e}")
             raise
 
     def get_chatgpt_response(self, user_message: str) -> str:
@@ -183,5 +188,5 @@ class OpenAIClient:
             content = choices[0].get('message', {}).get('content')
             return content.strip()
         except Exception as e:
-            logger.error(f"OpenAI API error: {e}")
+            self.logger.error(f"OpenAI API error: {e}")
             raise

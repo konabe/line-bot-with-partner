@@ -2,6 +2,7 @@ import logging
 from linebot.v3.messaging.models import TemplateMessage, ButtonsTemplate, PostbackAction
 from typing import Protocol, Dict, Any, Callable
 from src.infrastructure.line_model import create_pokemon_zukan_flex_dict
+from src.domain import OpenAIClient
 
 logger = logging.getLogger(__name__)
 
@@ -16,44 +17,10 @@ class DomainServices(Protocol):
     get_chatgpt_response: Callable[[str], str]
 
 
-def get_default_domain_services() -> DomainServices:
-    """デフォルトのdomainサービスを取得（後方互換性のため）"""
-    from src.domain import UMIGAME_STATE, is_closed_question, OpenAIClient
-
-    class DefaultDomainServices:
-        def __init__(self):
-            self.UMIGAME_STATE = UMIGAME_STATE
-            self.is_closed_question = is_closed_question
-            self._openai_client = None
-
-        def _get_openai_client(self):
-            if self._openai_client is None:
-                self._openai_client = OpenAIClient()
-            return self._openai_client
-
-        @property
-        def generate_umigame_puzzle(self):
-            return self._get_openai_client().generate_umigame_puzzle
-
-        @property
-        def call_openai_yesno_with_secret(self):
-            return self._get_openai_client().call_openai_yesno_with_secret
-
-        @property
-        def get_chatgpt_meal_suggestion(self):
-            return self._get_openai_client().get_chatgpt_meal_suggestion
-
-        @property
-        def get_chatgpt_response(self):
-            return self._get_openai_client().get_chatgpt_response
-
-    return DefaultDomainServices()
-
-
 class MessageHandler:
     """LINEメッセージイベントを処理するハンドラークラス"""
 
-    def __init__(self, safe_reply_message: Callable, domain_services: DomainServices = None):
+    def __init__(self, safe_reply_message: Callable, domain_services: DomainServices):
         """
         MessageHandlerの初期化
 
@@ -62,7 +29,7 @@ class MessageHandler:
             domain_services: ドメインサービス（省略時はデフォルトを使用）
         """
         self.safe_reply_message = safe_reply_message
-        self.domain_services = domain_services or get_default_domain_services()
+        self.domain_services = domain_services
 
     def handle_message(self, event) -> None:
         """LINE からのテキストメッセージイベントを処理します。"""

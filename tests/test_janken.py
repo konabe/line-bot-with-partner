@@ -29,7 +29,9 @@ class TestHand:
     def test_hand_equality(self):
         """Handインスタンスの等価性比較"""
         # 同じインスタンスは等しい
-        assert Hand.ROCK == Hand.ROCK
+        rock1 = Hand.ROCK
+        rock2 = Hand.ROCK
+        assert rock1 == rock2
         # 異なるインスタンスは等しくない
         assert Hand.ROCK != Hand.SCISSORS
         # 異なる型のオブジェクトとは等しくない

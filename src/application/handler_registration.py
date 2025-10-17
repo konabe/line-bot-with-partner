@@ -13,7 +13,28 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
     # ルートを登録
     register_routes(app, handler, safe_reply_message)
 
-    message_handler_instance = MessageHandler(safe_reply_message)
+    # デフォルトの DomainServices をここで生成（遅延で OpenAIClient を生成）
+    from src.domain import UMIGAME_STATE, is_closed_question
+    from src.domain import OpenAIClient
+    from types import SimpleNamespace
+
+    _openai_holder = {"client": None}
+
+    def _get_openai_client():
+        if _openai_holder["client"] is None:
+            _openai_holder["client"] = OpenAIClient()
+        return _openai_holder["client"]
+
+    default_domain_services = SimpleNamespace(
+        UMIGAME_STATE=UMIGAME_STATE,
+        is_closed_question=is_closed_question,
+        generate_umigame_puzzle=lambda: _get_openai_client().generate_umigame_puzzle(),
+        call_openai_yesno_with_secret=lambda text, secret: _get_openai_client().call_openai_yesno_with_secret(text, secret),
+        get_chatgpt_meal_suggestion=lambda: _get_openai_client().get_chatgpt_meal_suggestion(),
+        get_chatgpt_response=lambda text: _get_openai_client().get_chatgpt_response(text),
+    )
+
+    message_handler_instance = MessageHandler(safe_reply_message, default_domain_services)
 
     def message_handler(event):
         return message_handler_instance.handle_message(event)
