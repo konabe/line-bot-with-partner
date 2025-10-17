@@ -9,7 +9,7 @@ from .routes import register_routes, get_fallback_destination
 
 logger = logging.getLogger(__name__)
 
-def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_push_message):
+def register_handlers(app, handler: WebhookHandler, safe_reply_message):
     # ルートを登録
     register_routes(app, handler, safe_reply_message)
 

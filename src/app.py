@@ -21,7 +21,7 @@ init_messaging_api(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
 
 # register handlers from application layer
-register_handlers(app, handler, safe_reply_message, safe_push_message)
+register_handlers(app, handler, safe_reply_message)
 
 if __name__ == '__main__':
     logger.info("Flask app starting...")
