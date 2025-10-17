@@ -1,8 +1,5 @@
 import logging
-import requests
-import re
-from functools import lru_cache
-from linebot.v3.messaging.models import TextMessage, FlexMessage, TemplateMessage, ButtonsTemplate, PostbackAction
+from linebot.v3.messaging.models import TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction
 from typing import Protocol, Dict, Any, Callable
 from src.infrastructure.line_model import create_pokemon_zukan_flex_dict
 
@@ -304,5 +301,53 @@ class MessageHandler:
             )
         self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
 
+    def _get_random_pokemon_zukan_info(self):
+        """ランダムなポケモンの図鑑情報を取得します"""
+        import random
+        try:
+            import requests
+            # ランダムなポケモンを取得（1-1000の範囲）
+            poke_id = random.randint(1, 1000)
+            resp = requests.get(f'https://pokeapi.co/api/v2/pokemon/{poke_id}', timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
 
+            # 基本情報
+            zukan_no = data['id']
+            name_en = data['name']
+
+            # 日本語名を取得
+            name = name_en  # デフォルトは英語
+            species_url = data.get('species', {}).get('url')
+            if species_url:
+                try:
+                    species_resp = requests.get(species_url, timeout=10)
+                    species_resp.raise_for_status()
+                    species_data = species_resp.json()
+                    for name_info in species_data.get('names', []):
+                        if name_info.get('language', {}).get('name') == 'ja':
+                            name = name_info.get('name')
+                            break
+                except Exception:
+                    pass  # 日本語名取得失敗時は英語名を使用
+
+            # タイプ
+            types = [t['type']['name'] for t in data.get('types', [])]
+
+            # 画像URL
+            image_url = data.get('sprites', {}).get('other', {}).get('official-artwork', {}).get('front_default')
+
+            # 進化情報（簡易版）
+            evolution = "基本形"  # 簡易実装
+
+            return {
+                'zukan_no': zukan_no,
+                'name': name,
+                'types': types,
+                'image_url': image_url,
+                'evolution': evolution
+            }
+        except Exception as e:
+            logger.error(f"ポケモン情報取得エラー: {e}")
+            return None
 
