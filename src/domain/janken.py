@@ -51,6 +51,13 @@ Hand.PAPER = Hand('✋', 'パー')
 class JankenBattle:
     """じゃんけんの勝負を表すクラス"""
 
+    # 勝敗判定: (ユーザー, ボット) の組み合わせ
+    WINNING_COMBINATIONS = [
+        (Hand.ROCK, Hand.SCISSORS),     # グーはチョキに勝つ
+        (Hand.SCISSORS, Hand.PAPER),    # チョキはパーに勝つ
+        (Hand.PAPER, Hand.ROCK)         # パーはグーに勝つ
+    ]
+
     def __init__(self, user_hand: Hand, bot_hand: Hand):
         self.user_hand = user_hand
         self.bot_hand = bot_hand
@@ -60,14 +67,7 @@ class JankenBattle:
         if self.user_hand == self.bot_hand:
             return 'あいこ'
 
-        # 勝敗判定: (ユーザー, ボット) の組み合わせ
-        winning_combinations = [
-            (Hand.ROCK, Hand.SCISSORS),     # グーはチョキに勝つ
-            (Hand.SCISSORS, Hand.PAPER),    # チョキはパーに勝つ
-            (Hand.PAPER, Hand.ROCK)         # パーはグーに勝つ
-        ]
-
-        if (self.user_hand, self.bot_hand) in winning_combinations:
+        if (self.user_hand, self.bot_hand) in self.WINNING_COMBINATIONS:
             return 'あなたの勝ち！'
         else:
             return 'あなたの負け…'
