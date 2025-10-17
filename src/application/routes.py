@@ -8,11 +8,7 @@ from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 logger = logging.getLogger(__name__)
 
 
-def register_routes(app, handler: WebhookHandler, safe_reply_message, safe_push_message):
-    """アプリケーションの Flask ルートを登録します。"""
-    # 一貫性のため safe_push_message パラメータを保持（ルートでは未使用）
-    _ = safe_push_message
-
+def register_routes(app, handler: WebhookHandler, safe_reply_message):
     @app.route('/health', methods=['GET'])
     def health():
         logger.debug("/health endpoint called")

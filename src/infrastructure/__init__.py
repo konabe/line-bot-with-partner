@@ -1,13 +1,4 @@
-"""Infrastructure layer package.
-
-Adapters for external systems (LINE Messaging API, HTTP clients, etc.)
-This module manages a pluggable messaging adapter implementing the MessagingPort.
-"""
-
 import logging
-import os
-import time
-import threading
 from typing import Optional
 from ..ports.messaging import MessagingPort
 

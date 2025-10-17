@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def register_handlers(app, handler: WebhookHandler, safe_reply_message, safe_push_message):
     # ルートを登録
-    register_routes(app, handler, safe_reply_message, safe_push_message)
+    register_routes(app, handler, safe_reply_message)
 
     message_handler_instance = MessageHandler(safe_reply_message, get_fallback_destination)
 
