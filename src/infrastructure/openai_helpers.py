@@ -5,13 +5,6 @@ import requests
 
 logger = logging.getLogger(__name__)
 
-# 定数定義（後方互換性のため残す）
-OPENAI_API_KEY_ERROR = 'OPENAI_API_KEY is not set'
-DEFAULT_MODEL = 'gpt-3.5-turbo'
-CONTENT_TYPE_JSON = 'application/json'
-OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
-NO_CHOICES_ERROR = 'no choices from OpenAI'
-
 
 class OpenAIClient:
     """OpenAI APIとの通信を担当するクライアントクラス"""
@@ -27,8 +20,8 @@ class OpenAIClient:
         """OpenAIClientの初期化"""
         self.api_key = os.environ.get('OPENAI_API_KEY')
         if not self.api_key:
-            raise RuntimeError(self.OPENAI_API_KEY_ERROR)
-        self.model = os.environ.get('OPENAI_MODEL', self.DEFAULT_MODEL)
+            raise RuntimeError(OpenAIClient.OPENAI_API_KEY_ERROR)
+        self.model = os.environ.get('OPENAI_MODEL', OpenAIClient.DEFAULT_MODEL)
 
     def get_chatgpt_meal_suggestion(self):
         """料理のおすすめをChatGPTから取得"""
@@ -37,7 +30,7 @@ class OpenAIClient:
             "簡単なレシピや調理時間（目安）と一言コメント付きで提案してください。日本語で答えてください。"
         )
         headers = {
-            self.CONTENT_TYPE_JSON: self.CONTENT_TYPE_JSON,
+            OpenAIClient.CONTENT_TYPE_JSON: OpenAIClient.CONTENT_TYPE_JSON,
             'Authorization': f'Bearer {self.api_key}'
         }
         payload = {
@@ -50,12 +43,12 @@ class OpenAIClient:
             'temperature': 0.8,
         }
         try:
-            resp = requests.post(self.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
+            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
             resp.raise_for_status()
             data = resp.json()
             choices = data.get('choices') or []
             if not choices:
-                raise RuntimeError(self.NO_CHOICES_ERROR)
+                raise RuntimeError(OpenAIClient.NO_CHOICES_ERROR)
             content = choices[0].get('message', {}).get('content')
             return content
         except Exception as e:
@@ -77,14 +70,14 @@ class OpenAIClient:
             'max_tokens': 150,
             'temperature': 0.0,
         }
-        headers = {self.CONTENT_TYPE_JSON: self.CONTENT_TYPE_JSON, 'Authorization': f'Bearer {self.api_key}'}
+        headers = {OpenAIClient.CONTENT_TYPE_JSON: OpenAIClient.CONTENT_TYPE_JSON, 'Authorization': f'Bearer {self.api_key}'}
         try:
-            resp = requests.post(self.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
+            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
             resp.raise_for_status()
             data = resp.json()
             choices = data.get('choices') or []
             if not choices:
-                raise RuntimeError(self.NO_CHOICES_ERROR)
+                raise RuntimeError(OpenAIClient.NO_CHOICES_ERROR)
             content = choices[0].get('message', {}).get('content', '').strip()
             return content
         except Exception as e:
@@ -107,14 +100,14 @@ class OpenAIClient:
             'max_tokens': 150,
             'temperature': 0.0,
         }
-        headers = {self.CONTENT_TYPE_JSON: self.CONTENT_TYPE_JSON, 'Authorization': f'Bearer {self.api_key}'}
+        headers = {OpenAIClient.CONTENT_TYPE_JSON: OpenAIClient.CONTENT_TYPE_JSON, 'Authorization': f'Bearer {self.api_key}'}
         try:
-            resp = requests.post(self.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
+            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
             resp.raise_for_status()
             data = resp.json()
             choices = data.get('choices') or []
             if not choices:
-                raise RuntimeError(self.NO_CHOICES_ERROR)
+                raise RuntimeError(OpenAIClient.NO_CHOICES_ERROR)
             content = choices[0].get('message', {}).get('content', '').strip()
             return content
         except Exception as e:
@@ -133,14 +126,14 @@ class OpenAIClient:
             {'role': 'user', 'content': 'ウミガメのスープの問題を1つ生成してください。'}
         ]
         payload = {'model': self.model, 'messages': messages, 'max_tokens': 300, 'temperature': 0.8}
-        headers = {self.CONTENT_TYPE_JSON: self.CONTENT_TYPE_JSON, 'Authorization': f'Bearer {self.api_key}'}
+        headers = {OpenAIClient.CONTENT_TYPE_JSON: OpenAIClient.CONTENT_TYPE_JSON, 'Authorization': f'Bearer {self.api_key}'}
         try:
-            resp = requests.post(self.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
+            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
             resp.raise_for_status()
             data = resp.json()
             choices = data.get('choices') or []
             if not choices:
-                raise RuntimeError(self.NO_CHOICES_ERROR)
+                raise RuntimeError(OpenAIClient.NO_CHOICES_ERROR)
             content = choices[0].get('message', {}).get('content', '').strip()
             try:
                 import json as _json
@@ -168,7 +161,7 @@ class OpenAIClient:
             "雑談にも楽しく応じてください。"
         )
         headers = {
-            self.CONTENT_TYPE_JSON: self.CONTENT_TYPE_JSON,
+            OpenAIClient.CONTENT_TYPE_JSON: OpenAIClient.CONTENT_TYPE_JSON,
             'Authorization': f'Bearer {self.api_key}'
         }
         payload = {
@@ -181,42 +174,17 @@ class OpenAIClient:
             'temperature': 0.7,
         }
         try:
-            resp = requests.post(self.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
+            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
             resp.raise_for_status()
             data = resp.json()
             choices = data.get('choices') or []
             if not choices:
-                raise RuntimeError(self.NO_CHOICES_ERROR)
+                raise RuntimeError(OpenAIClient.NO_CHOICES_ERROR)
             content = choices[0].get('message', {}).get('content')
             return content.strip()
         except Exception as e:
             logger.error(f"OpenAI API error: {e}")
             raise
-
-
-# 後方互換性のためのグローバル関数
-_client = None
-
-def _get_client():
-    global _client
-    if _client is None:
-        _client = OpenAIClient()
-    return _client
-
-def get_chatgpt_meal_suggestion():
-    return _get_client().get_chatgpt_meal_suggestion()
-
-def call_openai_yesno(question: str) -> str:
-    return _get_client().call_openai_yesno(question)
-
-def call_openai_yesno_with_secret(question: str, secret: str) -> str:
-    return _get_client().call_openai_yesno_with_secret(question, secret)
-
-def generate_umigame_puzzle() -> dict:
-    return _get_client().generate_umigame_puzzle()
-
-def get_chatgpt_response(user_message: str) -> str:
-    return _get_client().get_chatgpt_response(user_message)
 
 
 def call_openai_yesno(question: str) -> str:

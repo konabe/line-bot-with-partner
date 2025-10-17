@@ -18,17 +18,34 @@ class DomainServices(Protocol):
 
 def get_default_domain_services() -> DomainServices:
     """デフォルトのdomainサービスを取得（後方互換性のため）"""
-    from src.domain import UMIGAME_STATE, is_closed_question, generate_umigame_puzzle
-    from src.infrastructure.openai_helpers import call_openai_yesno_with_secret, get_chatgpt_meal_suggestion, get_chatgpt_response
+    from src.domain import UMIGAME_STATE, is_closed_question, OpenAIClient
 
     class DefaultDomainServices:
         def __init__(self):
             self.UMIGAME_STATE = UMIGAME_STATE
             self.is_closed_question = is_closed_question
-            self.generate_umigame_puzzle = generate_umigame_puzzle
-            self.call_openai_yesno_with_secret = call_openai_yesno_with_secret
-            self.get_chatgpt_meal_suggestion = get_chatgpt_meal_suggestion
-            self.get_chatgpt_response = get_chatgpt_response
+            self._openai_client = None
+
+        def _get_openai_client(self):
+            if self._openai_client is None:
+                self._openai_client = OpenAIClient()
+            return self._openai_client
+
+        @property
+        def generate_umigame_puzzle(self):
+            return self._get_openai_client().generate_umigame_puzzle
+
+        @property
+        def call_openai_yesno_with_secret(self):
+            return self._get_openai_client().call_openai_yesno_with_secret
+
+        @property
+        def get_chatgpt_meal_suggestion(self):
+            return self._get_openai_client().get_chatgpt_meal_suggestion
+
+        @property
+        def get_chatgpt_response(self):
+            return self._get_openai_client().get_chatgpt_response
 
     return DefaultDomainServices()
 
