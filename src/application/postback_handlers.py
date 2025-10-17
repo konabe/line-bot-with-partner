@@ -5,7 +5,7 @@ from ..domain.janken import JankenGame
 logger = logging.getLogger(__name__)
 
 
-def handle_postback(event, safe_reply_message, get_fallback_destination):
+def handle_postback(event, safe_reply_message):
     """LINE からのポストバックイベントを処理します。"""
     data = event.postback.data
     logger.debug(f"handle_postback called. data: {data}")
@@ -25,4 +25,4 @@ def handle_postback(event, safe_reply_message, get_fallback_destination):
             reply_token=event.reply_token,
             messages=[TextMessage(text=reply)]
         )
-        safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+        safe_reply_message(reply_message_request)

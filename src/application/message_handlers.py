@@ -36,17 +36,15 @@ def get_default_domain_services() -> DomainServices:
 class MessageHandler:
     """LINEメッセージイベントを処理するハンドラークラス"""
 
-    def __init__(self, safe_reply_message: Callable, get_fallback_destination: Callable, domain_services: DomainServices = None):
+    def __init__(self, safe_reply_message: Callable, domain_services: DomainServices = None):
         """
         MessageHandlerの初期化
 
         Args:
             safe_reply_message: 安全なメッセージ送信関数
-            get_fallback_destination: フォールバック送信先取得関数
             domain_services: ドメインサービス（省略時はデフォルトを使用）
         """
         self.safe_reply_message = safe_reply_message
-        self.get_fallback_destination = get_fallback_destination
         self.domain_services = domain_services or get_default_domain_services()
 
     def handle_message(self, event) -> None:
@@ -101,7 +99,7 @@ class MessageHandler:
                 " 終了: 「ウミガメのスープ終了」"
             ))]
         )
-        self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+        self.safe_reply_message(reply_message_request)
 
     def _handle_umigame_end(self, event, user_id: str) -> None:
         """ウミガメのスープモードを終了します"""
@@ -112,7 +110,7 @@ class MessageHandler:
             reply_token=event.reply_token,
             messages=[TextMessage(text='ウミガメのスープモードを終了しました。')]
         )
-        self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+        self.safe_reply_message(reply_message_request)
 
     def _handle_umigame_question(self, event, user_id: str, text: str) -> None:
         """ウミガメのスープモードでの質問を処理します"""
@@ -126,7 +124,7 @@ class MessageHandler:
                 reply_token=event.reply_token,
                 messages=[TextMessage(text='申し訳ないです。OpenAI の呼び出しに失敗しました。管理者に OPENAI_API_KEY の設定を確認してください。')]
             )
-            self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+            self.safe_reply_message(reply_message_request)
             return
         cleared = False
         if answer.startswith('はい') or answer.startswith('はい、'):
@@ -136,7 +134,7 @@ class MessageHandler:
             reply_token=event.reply_token,
             messages=[TextMessage(text=answer)]
         )
-        self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+        self.safe_reply_message(reply_message_request)
         if cleared and user_id:
             self.domain_services.UMIGAME_STATE.pop(user_id, None)
             try:
@@ -188,7 +186,7 @@ class MessageHandler:
                 reply_token=event.reply_token,
                 messages=[TextMessage(text="直接送信を行いました。")]
             )
-            self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+            self.safe_reply_message(reply_message_request)
         except Exception:
             pass
 
@@ -207,7 +205,7 @@ class MessageHandler:
             reply_token=event.reply_token,
             messages=[TextMessage(text=reply_text)]
         )
-        self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+        self.safe_reply_message(reply_message_request)
 
     def _handle_janken(self, event) -> None:
         """じゃんけんリクエストを処理します"""
@@ -229,7 +227,7 @@ class MessageHandler:
             reply_token=event.reply_token,
             messages=[template]
         )
-        self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+        self.safe_reply_message(reply_message_request)
 
     def _handle_meal(self, event) -> None:
         """今日のご飯リクエストを処理します"""
@@ -254,7 +252,7 @@ class MessageHandler:
                 reply_token=event.reply_token,
                 messages=[TextMessage(text=suggestion)]
             )
-        self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+        self.safe_reply_message(reply_message_request)
 
     def _handle_pokemon(self, event) -> None:
         """ポケモンリクエストを処理します"""
@@ -267,14 +265,14 @@ class MessageHandler:
                 reply_token=event.reply_token,
                 messages=[flex]
             )
-            self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+            self.safe_reply_message(reply_message_request)
         else:
             from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
             reply_message_request = ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[TextMessage(text="ポケモン図鑑情報の取得に失敗しました。")]
             )
-            self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+            self.safe_reply_message(reply_message_request)
 
     def _handle_chatgpt(self, event, text: str) -> None:
         """ChatGPTによる一般的な応答を処理します"""
@@ -299,7 +297,7 @@ class MessageHandler:
                 reply_token=event.reply_token,
                 messages=[TextMessage(text=response)]
             )
-        self.safe_reply_message(reply_message_request, fallback_to=self.get_fallback_destination(event))
+        self.safe_reply_message(reply_message_request)
 
     def _get_random_pokemon_zukan_info(self):
         """ランダムなポケモンの図鑑情報を取得します"""

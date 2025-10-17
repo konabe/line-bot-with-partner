@@ -44,7 +44,7 @@ def _handle_signature_error(body, safe_reply_message):
                     reply_token=reply_token,
                     messages=[TextMessage(text='署名検証に失敗しました。管理者に連絡してください。')]
                 )
-                safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(ev))
+                safe_reply_message(reply_message_request)
     except Exception as ex:
         logger.error(f"障害通知送信失敗: {ex}")
 
@@ -60,24 +60,6 @@ def _handle_general_error(body, safe_reply_message):
                     reply_token=reply_token,
                     messages=[TextMessage(text='現在障害が発生しています。管理者に連絡してください。')]
                 )
-                safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(ev))
+                safe_reply_message(reply_message_request)
     except Exception as ex:
         logger.error(f"障害通知送信失敗: {ex}")
-
-
-def get_fallback_destination(event):
-    """プッシュフォールバック用の宛先 ID を返します。userId → groupId → roomId の優先順位で選択します。"""
-    try:
-        src = getattr(event, 'source', None)
-        if not src:
-            return None
-        return (
-            getattr(src, 'user_id', None)
-            or getattr(src, 'userId', None)
-            or getattr(src, 'group_id', None)
-            or getattr(src, 'groupId', None)
-            or getattr(src, 'room_id', None)
-            or getattr(src, 'roomId', None)
-        )
-    except Exception:
-        return None
