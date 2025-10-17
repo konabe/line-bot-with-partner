@@ -1,5 +1,5 @@
 import logging
-from linebot.v3.messaging.models import TextMessage, TemplateMessage, ButtonsTemplate, PostbackAction
+from linebot.v3.messaging.models import TemplateMessage, ButtonsTemplate, PostbackAction
 from typing import Protocol, Dict, Any, Callable
 from src.infrastructure.line_model import create_pokemon_zukan_flex_dict
 
