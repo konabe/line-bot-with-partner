@@ -3,227 +3,239 @@ import requests
 import re
 from functools import lru_cache
 from linebot.v3.messaging.models import TextMessage, FlexMessage, TemplateMessage, ButtonsTemplate, PostbackAction
+from typing import Protocol, Dict, Any, Callable
+from src.infrastructure.line_model import create_pokemon_zukan_flex_dict
 
 logger = logging.getLogger(__name__)
 
 
-def handle_message(event, safe_reply_message, get_fallback_destination):
-    """LINE からのテキストメッセージイベントを処理します。"""
-    # 循環インポートを避けるため、モジュールインポート時に遅延インポート
+class DomainServices(Protocol):
+    """Domain層サービスのインターフェース"""
+    UMIGAME_STATE: Dict[str, Any]
+    is_closed_question: Callable[[str], bool]
+    generate_umigame_puzzle: Callable[[], Dict[str, str]]
+    call_openai_yesno_with_secret: Callable[[str, str], str]
+    get_chatgpt_meal_suggestion: Callable[[], str]
+    get_chatgpt_response: Callable[[str], str]
+
+
+def get_default_domain_services() -> DomainServices:
+    """デフォルトのdomainサービスを取得（後方互換性のため）"""
     from src.domain import UMIGAME_STATE, is_closed_question, generate_umigame_puzzle
-    from src.domain import UMIGAME_STATE, is_closed_question, generate_umigame_puzzle
-    text = event.message.text
-    logger.debug(f"handle_message called. text: {text}")
+    from src.domain.services.openai_helpers import call_openai_yesno_with_secret, get_chatgpt_meal_suggestion, get_chatgpt_response
+
+    class DefaultDomainServices:
+        def __init__(self):
+            self.UMIGAME_STATE = UMIGAME_STATE
+            self.is_closed_question = is_closed_question
+            self.generate_umigame_puzzle = generate_umigame_puzzle
+            self.call_openai_yesno_with_secret = call_openai_yesno_with_secret
+            self.get_chatgpt_meal_suggestion = get_chatgpt_meal_suggestion
+            self.get_chatgpt_response = get_chatgpt_response
+
+    return DefaultDomainServices()
+
+
+def handle_umigame_start(event, safe_reply_message, get_fallback_destination, user_id, domain_services):
+    if user_id:
+        try:
+            puzzle_obj = domain_services.generate_umigame_puzzle()
+            domain_services.UMIGAME_STATE[user_id] = {'puzzle': puzzle_obj.get('puzzle', ''), 'answer': puzzle_obj.get('answer', '')}
+            puzzle_text = domain_services.UMIGAME_STATE[user_id]['puzzle']
+        except Exception as e:
+            logger.error(f"failed to generate umigame puzzle: {e}")
+            puzzle_text = '申し訳ないです。出題の生成に失敗しました。管理者に OPENAI_API_KEY の設定を確認してください。'
+    else:
+        puzzle_text = 'ウミガメのスープモードに入りました（ただし user_id が特定できないため内部状態は保持されません）。'
+    from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+    reply_message_request = ReplyMessageRequest(
+        reply_token=event.reply_token,
+        messages=[TextMessage(text=(
+            f"ウミガメのスープモードに入りました。出題:\n{puzzle_text}\n\n"
+            "クローズドクエスチョン（はい/いいえで答えられる質問）だけ受け付けます。"
+            " 終了: 「ウミガメのスープ終了」"
+        ))]
+    )
+    safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+
+
+def handle_umigame_end(event, safe_reply_message, get_fallback_destination, user_id, domain_services):
+    if user_id and domain_services.UMIGAME_STATE.get(user_id):
+        domain_services.UMIGAME_STATE.pop(user_id, None)
+    from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+    reply_message_request = ReplyMessageRequest(
+        reply_token=event.reply_token,
+        messages=[TextMessage(text='ウミガメのスープモードを終了しました。')]
+    )
+    safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+
+
+def handle_umigame_question(event, safe_reply_message, get_fallback_destination, user_id, text, domain_services):
+    try:
+        secret = domain_services.UMIGAME_STATE[user_id].get('answer', '')
+        answer = domain_services.call_openai_yesno_with_secret(text, secret)
+    except Exception as e:
+        logger.error(f"call_openai_yesno failed: {e}")
+        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+        reply_message_request = ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessage(text='申し訳ないです。OpenAI の呼び出しに失敗しました。管理者に OPENAI_API_KEY の設定を確認してください。')]
+        )
+        safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+        return
+    cleared = False
+    if answer.startswith('はい') or answer.startswith('はい、'):
+        cleared = True
+    from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+    reply_message_request = ReplyMessageRequest(
+        reply_token=event.reply_token,
+        messages=[TextMessage(text=answer)]
+    )
+    safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+    if cleared and user_id:
+        domain_services.UMIGAME_STATE.pop(user_id, None)
+        try:
+            reply_message_request = ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text='おめでとうございます。核心に迫る質問が来たためウミガメのスープモードを終了します。')]
+            )
+            safe_reply_message(reply_message_request)
+        except Exception:
+            pass
+
+
+def handle_direct_send_test(event, safe_reply_message, get_fallback_destination):
+    logger.info("直接送信テストを受信: 対象ユーザーへ push 送信を試みます")
+    user_id = None
     try:
         user_id = getattr(event.source, 'user_id', None) or getattr(event.source, 'userId', None)
     except Exception:
         user_id = None
-
-    if text.strip() == 'ウミガメのスープ':
-        if user_id:
-            try:
-                puzzle_obj = generate_umigame_puzzle()
-                UMIGAME_STATE[user_id] = {'puzzle': puzzle_obj.get('puzzle', ''), 'answer': puzzle_obj.get('answer', '')}
-                puzzle_text = UMIGAME_STATE[user_id]['puzzle']
-            except Exception as e:
-                logger.error(f"failed to generate umigame puzzle: {e}")
-                puzzle_text = '申し訳ないです。出題の生成に失敗しました。管理者に OPENAI_API_KEY の設定を確認してください。'
-        else:
-            puzzle_text = 'ウミガメのスープモードに入りました（ただし user_id が特定できないため内部状態は保持されません）。'
+    if not user_id:
+        logger.error("user_id が取得できません。push を送信できません")
         from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
         reply_message_request = ReplyMessageRequest(
             reply_token=event.reply_token,
-            messages=[TextMessage(text=(
-                f"ウミガメのスープモードに入りました。出題:\n{puzzle_text}\n\n"
-                "クローズドクエスチョン（はい/いいえで答えられる質問）だけ受け付けます。"
-                " 終了: 「ウミガメのスープ終了」"
-            ))]
+            messages=[TextMessage(text="直接送信ができませんでした: user_id が不明です")]
         )
-        safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+        safe_reply_message(reply_message_request)
         return
-
-    if text.strip() == 'ウミガメのスープ終了':
-        if user_id and UMIGAME_STATE.get(user_id):
-            UMIGAME_STATE.pop(user_id, None)
-        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-        reply_message_request = ReplyMessageRequest(
-            reply_token=event.reply_token,
-            messages=[TextMessage(text='ウミガメのスープモードを終了しました。')]
-        )
-        safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-        return
-
-    if user_id and UMIGAME_STATE.get(user_id):
-        if not is_closed_question(text):
-            logger.info('非クローズドクエスチョンをウミガメのスープモードで無視')
-            return
+    try:
+        from datetime import datetime
         try:
-            secret = UMIGAME_STATE[user_id].get('answer', '')
-            # delegate to domain service
-            from src.domain.services.openai_helpers import call_openai_yesno_with_secret
-            answer = call_openai_yesno_with_secret(text, secret)
-        except Exception as e:
-            logger.error(f"call_openai_yesno failed: {e}")
-            from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text='申し訳ないです。OpenAI の呼び出しに失敗しました。管理者に OPENAI_API_KEY の設定を確認してください。')]
-            )
-            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-            return
-        cleared = False
-        if answer.startswith('はい') or answer.startswith('はい、'):
-            cleared = True
-        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-        reply_message_request = ReplyMessageRequest(
-            reply_token=event.reply_token,
-            messages=[TextMessage(text=answer)]
-        )
-        safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-        if cleared and user_id:
-            UMIGAME_STATE.pop(user_id, None)
-            try:
-                reply_message_request = ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text='おめでとうございます。核心に迫る質問が来たためウミガメのスープモードを終了します。')]
-                )
-                safe_reply_message(reply_message_request)
-            except Exception:
-                pass
-        return
-
-    if text.strip() == '直接送信テスト':
-        logger.info("直接送信テストを受信: 対象ユーザーへ push 送信を試みます")
-        user_id = None
-        try:
-            user_id = getattr(event.source, 'user_id', None) or getattr(event.source, 'userId', None)
+            from zoneinfo import ZoneInfo
+            now = datetime.now(ZoneInfo('Asia/Tokyo'))
         except Exception:
-            user_id = None
-        if not user_id:
-            logger.error("user_id が取得できません。push を送信できません")
-            from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text="直接送信ができませんでした: user_id が不明です")]
-            )
-            safe_reply_message(reply_message_request)
-            return
-        try:
-            from datetime import datetime
-            try:
-                from zoneinfo import ZoneInfo
-                now = datetime.now(ZoneInfo('Asia/Tokyo'))
-            except Exception:
-                now = datetime.now()
-            now_str = now.strftime('%Y-%m-%d %H:%M:%S %Z')
-        except Exception as e:
-            logger.error(f"日時文字列作成に失敗: {e}")
-            now_str = '取得できませんでした'
-        from linebot.v3.messaging.models import PushMessageRequest, TextMessage
-        push_message_request = PushMessageRequest(
-            to=user_id,
-            messages=[TextMessage(text=f"現在の日時: {now_str}")]
-        )
-        safe_reply_message(push_message_request)  # Note: This should be safe_push_message
-        try:
-            from linebot.v3.messaging.models import ReplyMessageRequest
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text="直接送信を行いました。")]
-            )
-            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-        except Exception:
-            pass
-        return
-
-    if '天気' in text:
-        logger.info("天気リクエスト検出")
-        loc = extract_location_from_weather_query(text)
-        if loc:
-            logger.debug(f"位置解決: {loc}")
-            reply_text = get_location_weather_text(loc)
-        else:
-            logger.debug("位置未指定のため博多天気を返す")
-            reply_text = get_hakata_weather_text()
+            now = datetime.now()
+        now_str = now.strftime('%Y-%m-%d %H:%M:%S %Z')
+    except Exception as e:
+        logger.error(f"日時文字列作成に失敗: {e}")
+        now_str = '取得できませんでした'
+    from linebot.v3.messaging.models import PushMessageRequest, TextMessage
+    push_message_request = PushMessageRequest(
+        to=user_id,
+        messages=[TextMessage(text=f"現在の日時: {now_str}")]
+    )
+    safe_reply_message(push_message_request)  # Note: This should be safe_push_message
+    try:
         from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
         reply_message_request = ReplyMessageRequest(
             reply_token=event.reply_token,
-            messages=[TextMessage(text=reply_text)]
+            messages=[TextMessage(text="直接送信を行いました。")]
         )
         safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-        return
+    except Exception:
+        pass
 
-    if text.strip() == 'じゃんけん':
-        logger.info("じゃんけんテンプレートを送信")
-        template = TemplateMessage(
-            alt_text="じゃんけんしましょう！",
-            template=ButtonsTemplate(
-                title="じゃんけん",
-                text="どれを出しますか？",
-                actions=[
-                    PostbackAction(label="✊ グー", data="janken:✊"),
-                    PostbackAction(label="✌️ チョキ", data="janken:✌️"),
-                    PostbackAction(label="✋ パー", data="janken:✋")
-                ]
-            )
+
+def handle_weather(event, safe_reply_message, get_fallback_destination, text):
+    logger.info("天気リクエスト検出")
+    loc = extract_location_from_weather_query(text)
+    if loc:
+        logger.debug(f"位置解決: {loc}")
+        reply_text = get_location_weather_text(loc)
+    else:
+        logger.debug("位置未指定のため博多天気を返す")
+        reply_text = get_hakata_weather_text()
+    from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+    reply_message_request = ReplyMessageRequest(
+        reply_token=event.reply_token,
+        messages=[TextMessage(text=reply_text)]
+    )
+    safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+
+
+def handle_janken(event, safe_reply_message, get_fallback_destination):
+    logger.info("じゃんけんテンプレートを送信")
+    template = TemplateMessage(
+        alt_text="じゃんけんしましょう！",
+        template=ButtonsTemplate(
+            title="じゃんけん",
+            text="どれを出しますか？",
+            actions=[
+                PostbackAction(label="✊ グー", data="janken:✊"),
+                PostbackAction(label="✌️ チョキ", data="janken:✌️"),
+                PostbackAction(label="✋ パー", data="janken:✋")
+            ]
         )
+    )
+    from linebot.v3.messaging.models import ReplyMessageRequest
+    reply_message_request = ReplyMessageRequest(
+        reply_token=event.reply_token,
+        messages=[template]
+    )
+    safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+
+
+def handle_meal(event, safe_reply_message, get_fallback_destination, domain_services):
+    logger.info("今日のご飯リクエストを受信: ChatGPT に問い合わせます")
+    try:
+        suggestion = domain_services.get_chatgpt_meal_suggestion()
+    except Exception as e:
+        logger.error(f"get_chatgpt_meal_suggestion error: {e}")
+        suggestion = None
+    from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+    if not suggestion:
+        msg = (
+            "申し訳ないです。おすすめを取得できませんでした。"
+            " 管理者に OPENAI_API_KEY の設定を確認してもらってください。"
+        )
+        reply_message_request = ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessage(text=msg)]
+        )
+    else:
+        reply_message_request = ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessage(text=suggestion)]
+        )
+    safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
+
+
+def handle_pokemon(event, safe_reply_message, get_fallback_destination):
+    logger.info("ポケモンリクエスト受信。図鑑風情報を返信")
+    info = get_random_pokemon_zukan_info()
+    if info:
+        flex = create_pokemon_zukan_flex_dict(info)
         from linebot.v3.messaging.models import ReplyMessageRequest
         reply_message_request = ReplyMessageRequest(
             reply_token=event.reply_token,
-            messages=[template]
+            messages=[flex]
         )
         safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-        return
-
-    if text.strip() == '今日のご飯':
-        logger.info("今日のご飯リクエストを受信: ChatGPT に問い合わせます")
-        try:
-            suggestion = get_chatgpt_meal_suggestion()
-        except Exception as e:
-            logger.error(f"get_chatgpt_meal_suggestion error: {e}")
-            suggestion = None
+    else:
         from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-        if not suggestion:
-            msg = (
-                "申し訳ないです。おすすめを取得できませんでした。"
-                " 管理者に OPENAI_API_KEY の設定を確認してもらってください。"
-            )
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=msg)]
-            )
-        else:
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=suggestion)]
-            )
+        reply_message_request = ReplyMessageRequest(
+            reply_token=event.reply_token,
+            messages=[TextMessage(text="ポケモン図鑑情報の取得に失敗しました。")]
+        )
         safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-        return
 
-    if text.strip() == 'ポケモン':
-        logger.info("ポケモンリクエスト受信。図鑑風情報を返信")
-        info = get_random_pokemon_zukan_info()
-        if info:
-            flex = create_pokemon_zukan_flex(info)
-            from linebot.v3.messaging.models import ReplyMessageRequest
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[flex]
-            )
-            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-        else:
-            from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text="ポケモン図鑑情報の取得に失敗しました。")]
-            )
-            safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-        return
 
-    # どのコマンドにも該当しないメッセージに対してはChatGPTで応答
+def handle_chatgpt(event, safe_reply_message, get_fallback_destination, text, domain_services):
     logger.info("コマンド以外のメッセージを受信: ChatGPT に問い合わせます")
     try:
-        response = get_chatgpt_response(text)
+        response = domain_services.get_chatgpt_response(text)
     except Exception as e:
         logger.error(f"get_chatgpt_response error: {e}")
         response = None
@@ -243,7 +255,41 @@ def handle_message(event, safe_reply_message, get_fallback_destination):
             messages=[TextMessage(text=response)]
         )
     safe_reply_message(reply_message_request, fallback_to=get_fallback_destination(event))
-    return
+
+
+def handle_message(event, safe_reply_message, get_fallback_destination, domain_services=None):
+    """LINE からのテキストメッセージイベントを処理します。"""
+    if domain_services is None:
+        domain_services = get_default_domain_services()
+
+    text = event.message.text
+    logger.debug(f"handle_message called. text: {text}")
+    try:
+        user_id = getattr(event.source, 'user_id', None) or getattr(event.source, 'userId', None)
+    except Exception:
+        user_id = None
+
+    t = text.strip()
+    if t == 'ウミガメのスープ':
+        return handle_umigame_start(event, safe_reply_message, get_fallback_destination, user_id, domain_services)
+    if t == 'ウミガメのスープ終了':
+        return handle_umigame_end(event, safe_reply_message, get_fallback_destination, user_id, domain_services)
+    if user_id and domain_services.UMIGAME_STATE.get(user_id):
+        if not domain_services.is_closed_question(text):
+            logger.info('非クローズドクエスチョンをウミガメのスープモードで無視')
+            return
+        return handle_umigame_question(event, safe_reply_message, get_fallback_destination, user_id, text, domain_services)
+    if t == '直接送信テスト':
+        return handle_direct_send_test(event, safe_reply_message, get_fallback_destination)
+    if '天気' in text:
+        return handle_weather(event, safe_reply_message, get_fallback_destination, text)
+    if t == 'じゃんけん':
+        return handle_janken(event, safe_reply_message, get_fallback_destination)
+    if t == '今日のご飯':
+        return handle_meal(event, safe_reply_message, get_fallback_destination, domain_services)
+    if t == 'ポケモン':
+        return handle_pokemon(event, safe_reply_message, get_fallback_destination)
+    return handle_chatgpt(event, safe_reply_message, get_fallback_destination, text, domain_services)
 
 
 def get_random_pokemon_zukan_info():
@@ -263,27 +309,8 @@ def get_random_pokemon_zukan_info():
         zukan_no = poke_id
         evolution = ""
         if species_url:
-            resp3 = requests.get(species_url)
-            resp3.raise_for_status()
-            names = resp3.json().get('names', [])
-            for n in names:
-                if n.get('language', {}).get('name') == 'ja':
-                    name = n.get('name')
-                    break
-            zukan_no = resp3.json().get('id', poke_id)
-            evo_url = resp3.json().get('evolution_chain', {}).get('url')
-            if evo_url:
-                resp4 = requests.get(evo_url)
-                resp4.raise_for_status()
-                chain = resp4.json().get('chain', {})
-                evo_names = []
-                def extract_evo_names(chain):
-                    if 'species' in chain:
-                        evo_names.append(chain['species']['name'])
-                    for e in chain.get('evolves_to', []):
-                        extract_evo_names(e)
-                extract_evo_names(chain)
-                evolution = ' → '.join(evo_names)
+            # delegate species and evolution parsing to helper
+            name, zukan_no, evolution = _parse_species_and_evolution(species_url, name, poke_id)
         logger.info(f"取得したポケモン: {name} (No.{zukan_no})")
         return {
             'zukan_no': zukan_no,
@@ -417,3 +444,35 @@ def get_location_weather_text(location_name: str):
     except Exception as e:
         logger.error(f"get_location_weather_text error: {e}")
         return f"現在{location_name}の天気を取得できませんでした"
+
+
+def _parse_species_and_evolution(species_url: str, default_name: str, default_id: int):
+    """species API を叩いて和名と図鑑番号、進化連鎖を抽出します。"""
+    try:
+        resp3 = requests.get(species_url)
+        resp3.raise_for_status()
+        data = resp3.json()
+        name = default_name
+        names = data.get('names', [])
+        for n in names:
+            if n.get('language', {}).get('name') == 'ja':
+                name = n.get('name')
+                break
+        zukan_no = data.get('id', default_id)
+        evo_url = data.get('evolution_chain', {}).get('url')
+        evolution = ''
+        if evo_url:
+            resp4 = requests.get(evo_url)
+            resp4.raise_for_status()
+            chain = resp4.json().get('chain', {})
+            evo_names = []
+            def extract_evo_names(chain_node):
+                if 'species' in chain_node:
+                    evo_names.append(chain_node['species']['name'])
+                for e in chain_node.get('evolves_to', []):
+                    extract_evo_names(e)
+            extract_evo_names(chain)
+            evolution = ' → '.join(evo_names)
+        return name, zukan_no, evolution
+    except Exception:
+        return default_name, default_id, ''
