@@ -243,11 +243,17 @@ class MessageHandler:
         logger.info("ポケモンリクエスト受信。図鑑風情報を返信")
         info = self._get_random_pokemon_zukan_info()
         if info:
-            flex = create_pokemon_zukan_flex_dict(info)
+            # create the bubble contents and wrap it as a Flex message object
+            bubble_contents = create_pokemon_zukan_flex_dict(info)
+            flex_message = {
+                "type": "flex",
+                "altText": "ポケモン図鑑",
+                "contents": bubble_contents,
+            }
             from linebot.v3.messaging.models import ReplyMessageRequest
             reply_message_request = ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[flex]
+                messages=[flex_message]
             )
             self.safe_reply_message(reply_message_request)
         else:

@@ -49,3 +49,63 @@ def test_callback_valid_signature():
         )
         assert response.status_code == 200
         assert response.data == b'OK'
+
+
+def test_callback_pokemon_flow():
+    # Instead of exercising the webhook stack (which depends on WebhookHandler
+    # and signature handling), call MessageHandler.handle_message directly with
+    # a fake event and ensure the mock adapter receives a reply. This keeps the
+    # test deterministic and focuses on the "ポケモン" flow.
+    from src.infrastructure import register_adapter
+    from tests.support.mock_adapter import MockMessagingAdapter
+    from src.application.message_handlers import MessageHandler
+    from types import SimpleNamespace
+    from src.domain import UMIGAME_STATE, is_closed_question, OpenAIClient
+
+    # register mock adapter
+    mock = MockMessagingAdapter()
+    register_adapter(mock)
+    mock.init('test-token')
+
+    # create a minimal default_domain_services similar to handler_registration
+    _openai_holder = {"client": None}
+
+    def _get_openai_client():
+        if _openai_holder["client"] is None:
+            _openai_holder["client"] = OpenAIClient()
+        return _openai_holder["client"]
+
+    default_domain_services = SimpleNamespace(
+        UMIGAME_STATE=UMIGAME_STATE,
+        is_closed_question=is_closed_question,
+        generate_umigame_puzzle=lambda: _get_openai_client().generate_umigame_puzzle(),
+        call_openai_yesno_with_secret=lambda text, secret: _get_openai_client().call_openai_yesno_with_secret(text, secret),
+        get_chatgpt_meal_suggestion=lambda: _get_openai_client().get_chatgpt_meal_suggestion(),
+        get_chatgpt_response=lambda text: _get_openai_client().get_chatgpt_response(text),
+    )
+
+    handler = MessageHandler(mock.reply_message, default_domain_services)
+
+    # build a fake event object expected by MessageHandler
+    class FakeMessage:
+        def __init__(self, text):
+            self.text = text
+
+    class FakeSource:
+        def __init__(self, userId):
+            self.userId = userId
+
+    class FakeEvent:
+        def __init__(self, text, userId='U123'):
+            self.message = FakeMessage(text)
+            self.source = FakeSource(userId)
+            self.reply_token = 'dummy'
+
+    event = FakeEvent('ポケモン')
+
+    # Call handler
+    handler.handle_message(event)
+
+    # ensure a reply was sent through the mock adapter
+    replies = mock.get_replies()
+    assert len(replies) >= 1
