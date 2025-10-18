@@ -245,7 +245,11 @@ class MessageHandler:
         if info:
             # create the bubble contents and wrap it as a Flex message object
             bubble_contents = create_pokemon_zukan_flex_dict(info)
-            flex_message = {
+            # Use a plain dict to represent the Flex message. Constructing the
+            # SDK FlexMessage object may result in missing serialized fields
+            # depending on SDK internals, so use the explicit dict matching the
+            # LINE Messaging API contract.
+            flex_msg_obj = {
                 "type": "flex",
                 "altText": "ポケモン図鑑",
                 "contents": bubble_contents,
@@ -253,7 +257,7 @@ class MessageHandler:
             from linebot.v3.messaging.models import ReplyMessageRequest
             reply_message_request = ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[flex_message]
+                messages=[flex_msg_obj]
             )
             self.safe_reply_message(reply_message_request)
         else:
