@@ -1,9 +1,7 @@
 """Application layer package.
 
-Place use-case orchestration here. Initially acts as a shim to keep imports working
-while we migrate code into DDD structure.
+アプリケーション層のモジュール群をまとめるパッケージ。
+ここでは副作用のあるインポートを行わず、循環参照を避ける。
 """
 
-from ..app import app as flask_app
-
-__all__ = ['flask_app']
+__all__: list[str] = []
