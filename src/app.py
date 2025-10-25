@@ -21,6 +21,9 @@ handler = WebhookHandler(CHANNEL_SECRET)
 # register handlers from application layer
 register_handlers(app, handler, safe_reply_message)
 
+# Gunicorn 環境では __main__ ブロックは実行されないため、ここで初期化ログを出す
+logger.info("App initialized (module imported)")
+
 if __name__ == '__main__':
     logger.info("Flask app starting...")
     notify_startup_if_configured(safe_push_message, logger)
