@@ -16,9 +16,11 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
     # デフォルトの DomainServices をここで生成（遅延で OpenAIClient を生成）
     from src.domain import UMIGAME_STATE, is_closed_question
     from src.domain import OpenAIClient
+    from src.infrastructure.weather_adapter import WeatherAdapter
     from types import SimpleNamespace
 
     _openai_holder = {"client": None}
+    _weather_adapter = WeatherAdapter()
 
     def _get_openai_client():
         if _openai_holder["client"] is None:
@@ -32,6 +34,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
         call_openai_yesno_with_secret=lambda text, secret: _get_openai_client().call_openai_yesno_with_secret(text, secret),
         get_chatgpt_meal_suggestion=lambda: _get_openai_client().get_chatgpt_meal_suggestion(),
         get_chatgpt_response=lambda text: _get_openai_client().get_chatgpt_response(text),
+        get_weather_text=lambda location: _weather_adapter.get_weather_text(location),
     )
 
     message_handler_instance = MessageHandler(safe_reply_message, default_domain_services)

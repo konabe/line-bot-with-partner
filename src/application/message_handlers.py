@@ -1,4 +1,5 @@
 import logging
+import requests
 from linebot.v3.messaging.models import TemplateMessage, ButtonsTemplate, PostbackAction
 from typing import Protocol, Dict, Any, Callable
 from src.infrastructure.line_model import create_pokemon_zukan_flex_dict
@@ -15,6 +16,7 @@ class DomainServices(Protocol):
     call_openai_yesno_with_secret: Callable[[str, str], str]
     get_chatgpt_meal_suggestion: Callable[[], str]
     get_chatgpt_response: Callable[[str], str]
+    get_weather_text: Callable[[str], str]
 
 
 class MessageHandler:
@@ -180,10 +182,10 @@ class MessageHandler:
         loc = self._extract_location_from_weather_query(text)
         if loc:
             logger.debug(f"位置解決: {loc}")
-            reply_text = self._get_location_weather_text(loc)
+            reply_text = self.domain_services.get_weather_text(loc)
         else:
-            logger.debug("位置未指定のため博多天気を返す")
-            reply_text = self._get_hakata_weather_text()
+            logger.debug("位置未指定のため東京天気を返す")
+            reply_text = self.domain_services.get_weather_text('東京')
         from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
         reply_message_request = ReplyMessageRequest(
             reply_token=event.reply_token,
@@ -342,4 +344,16 @@ class MessageHandler:
         except Exception as e:
             logger.error(f"ポケモン情報取得エラー: {e}")
             return None
+
+    def _extract_location_from_weather_query(self, text: str) -> str:
+        """天気クエリから地名を抽出します"""
+        # 「○○の天気」パターンを検出
+        import re
+        match = re.search(r'(.+?)の天気', text)
+        if match:
+            location = match.group(1).strip()
+            return location
+        return ""
+
+
 

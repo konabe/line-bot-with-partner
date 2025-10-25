@@ -1,6 +1,5 @@
-from typing import Protocol, Any
+from typing import Protocol
 import logging
-
 
 class Logger(Protocol):
     def debug(self, msg: str) -> None: ...
@@ -12,6 +11,9 @@ class Logger(Protocol):
 
 class StdLogger:
     def __init__(self, name: str = __name__):
+        # ルートロガーが未設定なら基本設定を行う（重複設定は避ける）
+        if not logging.getLogger().handlers:
+            logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(message)s')
         self._logger = logging.getLogger(name)
 
     def debug(self, msg: str) -> None:

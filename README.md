@@ -82,17 +82,30 @@ Render などの PaaS での再デプロイ時にもプロセス起動直後に 
 
 ## 任意の場所の天気を取得
 
-LINE で「◯◯の天気」と送ると、◯◯ を地名としてジオコーディングし現在の天気を返信します。
+LINE で「◯◯の天気」と送ると、OpenWeatherMap APIを使用して現在の天気を返信します。
 
 例:
 
 ```
 東京の天気
-大阪の天気です
-札幌の天気？
+大阪の天気
+博多の天気
 ```
 
-解決に失敗した場合は「『◯◯』の天気を見つけられませんでした」と返答します。内部では Open-Meteo Geocoding API と Forecast API を利用しています。頻度が高い場合はレート制限に注意してください。
+### 必要な環境変数
+
+| 環境変数 | 必須 | 説明 |
+|----------|------|------|
+| `OPENWEATHERMAP_API_KEY` | 必須 | OpenWeatherMap APIキー |
+
+OpenWeatherMap APIキーの取得方法:
+1. [OpenWeatherMap](https://openweathermap.org/api)でアカウント作成
+2. API Keysページで無料のAPIキーを取得
+3. `.env`ファイルに`OPENWEATHERMAP_API_KEY=your_api_key_here`を追加
+
+対応都市: 東京、大阪、名古屋、福岡、博多、札幌、仙台、広島、京都、神戸、横浜
+
+解決に失敗した場合は「◯◯の天気情報の取得に失敗しました」と返答します。
 # What is this?
 
 The github.dev web-based editor is a lightweight editing experience that runs entirely in your browser. You can navigate files and source code repositories from GitHub, and make and commit code changes.

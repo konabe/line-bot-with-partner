@@ -6,24 +6,12 @@ import os
 from typing import Callable, Optional
 
 from linebot.v3.messaging.models import PushMessageRequest, TextMessage
-
-
-class _LoggerProtocol:
-    """実行時に型チェッカーを満足させるための最小ロガープロトコル。"""
-
-    def debug(self, message: str):  # pragma: no cover - protocol definition
-        raise NotImplementedError
-
-    def info(self, message: str):  # pragma: no cover - protocol definition
-        raise NotImplementedError
-
-    def error(self, message: str):  # pragma: no cover - protocol definition
-        raise NotImplementedError
+from infrastructure.logger import Logger
 
 
 def notify_startup_if_configured(
     safe_push_message: Callable[[PushMessageRequest], None],
-    logger: Optional[_LoggerProtocol] = None,
+    logger: Optional[Logger] = None,
 ) -> bool:
     """ADMIN_USER_ID が設定されている場合、管理者に起動通知を送信します。
 
