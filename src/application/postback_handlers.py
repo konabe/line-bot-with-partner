@@ -1,7 +1,7 @@
 from ..infrastructure.logger import Logger, create_logger
 from typing import Callable, Optional
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-from ..domain.janken import JankenGame
+from ..domain.models.janken import JankenGame
 from ..domain.services.janken_game_master_service import JankenGameMasterService
 from .usecases.start_janken_game_usecase import StartJankenGameUsecase
 from .types import PostbackEventLike

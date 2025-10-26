@@ -6,7 +6,7 @@
 
 from typing import Optional
 
-from ..janken import JankenGame
+from ..models.janken import JankenGame
 
 
 class JankenGameMasterService:
