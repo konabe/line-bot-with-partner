@@ -15,4 +15,21 @@ def create_pokemon_zukan_button_template(info):
         )
         return models.TemplateMessage(alt_text='ポケモン図鑑', template=template)
     except Exception:
-        return
+        # SDK が利用できない、またはモデル生成に失敗した場合は互換の dict を返す
+        return create_pokemon_zukan_flex_dict(info)
+
+
+def create_pokemon_zukan_flex_dict(info):
+    """図鑑情報を含むテキストメッセージ dict を返す（互換関数）。"""
+    type_text = ' / '.join(info.get('types') or []) if info.get('types') else '不明'
+    image_url = info.get('image_url') or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png"
+    text = (
+        f"No.{info.get('zukan_no')} {info.get('name')}\n"
+        f"タイプ: {type_text}\n"
+        f"進化: {info.get('evolution')}\n"
+        f"画像: {image_url}"
+    )
+    return {
+        'type': 'text',
+        'text': text,
+    }
