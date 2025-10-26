@@ -80,12 +80,14 @@ class MessageHandler:
                 "altText": "ポケモン図鑑",
                 "contents": bubble_contents,
             }
-            from linebot.v3.messaging.models import ReplyMessageRequest
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[flex_msg_obj]
-            )
-            self.safe_reply_message(reply_message_request)
+            # Build a plain dict payload matching LINE Messaging API to avoid
+            # SDK model serialization stripping flex fields when messages are
+            # provided as plain dicts. The adapter accepts dict payloads.
+            reply_payload = {
+                "replyToken": event.reply_token,
+                "messages": [flex_msg_obj],
+            }
+            self.safe_reply_message(reply_payload)
         else:
             from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
             reply_message_request = ReplyMessageRequest(
