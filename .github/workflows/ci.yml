@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_call:
+    secrets:
+      OPENAI_API_KEY:
+        required: false
+      LINE_CHANNEL_ACCESS_TOKEN:
+        required: false
 
 jobs:
   test:
