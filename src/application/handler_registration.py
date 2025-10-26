@@ -15,8 +15,8 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
     register_routes(app, handler, safe_reply_message)
 
     # デフォルトの DomainServices をここで生成（遅延で OpenAIClient を生成）
-    from src.domain import OpenAIClient
-    from src.infrastructure.weather_adapter import WeatherAdapter
+    from ..domain import OpenAIClient
+    from ..infrastructure.weather_adapter import WeatherAdapter
     from types import SimpleNamespace
 
     _openai_holder = {"client": None}
@@ -41,7 +41,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
 
     # Instantiate PostbackHandler with injected logger and safe_reply_message
     # profile_getter is implemented in the infrastructure layer
-    from src.infrastructure.profiles import get_display_name_from_line_profile
+    from ..infrastructure.profiles import get_display_name_from_line_profile
 
     _postback_handler_instance = PostbackHandler(
         create_logger(__name__), safe_reply_message, get_display_name_from_line_profile
