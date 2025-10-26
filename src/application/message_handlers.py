@@ -1,7 +1,7 @@
 import logging
 from .usecases.send_janken_options_usecase import SendJankenOptionsUsecase
 from typing import Protocol, Callable
-from src.infrastructure.line_model import create_pokemon_zukan_flex_dict
+from ..infrastructure.line_model import create_pokemon_zukan_flex_dict
 from .usecases.send_weather_usecase import SendWeatherUsecase
 
 logger = logging.getLogger(__name__)

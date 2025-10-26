@@ -3,7 +3,7 @@ import re
 import requests
 from typing import Optional
 
-from src.infrastructure.logger import Logger, create_logger
+from .logger import Logger, create_logger
 
 
 class OpenAIClient:
