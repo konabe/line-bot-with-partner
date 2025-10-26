@@ -58,7 +58,7 @@ class OpenAIClient:
         payload = {
             'model': self.model,
             'input': prompt,
-            'max_tokens': 500,
+            'max_output_tokens': 500,
             'temperature': 0.8,
         }
         try:
@@ -67,7 +67,6 @@ class OpenAIClient:
             data = resp.json()
             # 抽出の互換性を広く持たせる
             def _extract_text_from_response(data: dict) -> str:
-                # Try choices/message/content (old chat completions or some responses shapes)
                 choices = data.get('choices') or []
                 if choices:
                     choice = choices[0]
@@ -138,8 +137,9 @@ class OpenAIClient:
         }
         payload = {
             'model': self.model,
-            'input': f"{system_prompt}\n\nUser: {user_message}",
-            'max_tokens': 500,
+            'instruction': f"{system_prompt}",
+            'input': f"{user_message}",
+            'max_output_tokens': 500,
             'temperature': 0.7,
         }
         try:
