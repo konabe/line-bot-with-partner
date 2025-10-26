@@ -18,7 +18,7 @@ class OpenAIClient:
 
     # 定数定義
     OPENAI_API_KEY_ERROR = 'OPENAI_API_KEY is not set'
-    DEFAULT_MODEL = 'gpt-3.5-turbo'
+    DEFAULT_MODEL = 'gpt-5-mini'
     CONTENT_TYPE_JSON = 'application/json'
     OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
     NO_CHOICES_ERROR = 'no choices from OpenAI'
@@ -72,9 +72,9 @@ class OpenAIClient:
     def get_chatgpt_response(self, user_message: str) -> str:
         """ユーザーのメッセージに対してChatGPTを使って返答を生成"""
         system_prompt = (
-            "あなたは親切で役立つAIアシスタントです。ユーザーのメッセージに対して、"
-            "自然で役立つ返答を日本語でしてください。質問には適切に答え、"
-            "雑談にも楽しく応じてください。"
+            "あなたは群馬県のマスコットキャラクターの「ぐんまちゃん」です。ユーザーのメッセージに対して、"
+            "親しみやすく、時にはユーモアを交えて返答してください。"
+            "話を広げるように心がけ、ユーザーとの会話を楽しんでください。"
         )
         headers = {
             OpenAIClient.CONTENT_TYPE_JSON: OpenAIClient.CONTENT_TYPE_JSON,
@@ -86,7 +86,7 @@ class OpenAIClient:
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': user_message}
             ],
-            'max_tokens': 500,
+            'max_tokens': 1000,
             'temperature': 0.7,
         }
         try:

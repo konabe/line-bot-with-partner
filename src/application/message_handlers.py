@@ -42,7 +42,8 @@ class MessageHandler:
             return self._handle_meal(event)
         if t == 'ポケモン':
             return self._handle_pokemon(event)
-        return self._handle_chatgpt(event, text)
+        if t.startswith('ぐんまちゃん、'):
+            return self._handle_chatgpt(event, text)
 
 
     def _handle_weather(self, event, text: str) -> None:
