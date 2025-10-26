@@ -69,25 +69,42 @@ class MessageHandler:
         logger.info("ポケモンリクエスト受信。図鑑風情報を返信")
         info = self._get_random_pokemon_zukan_info()
         if info:
-            # create the bubble contents and wrap it as a Flex message object
-            bubble_contents = create_pokemon_zukan_flex_dict(info)
-            # Use a plain dict to represent the Flex message. Constructing the
-            # SDK FlexMessage object may result in missing serialized fields
-            # depending on SDK internals, so use the explicit dict matching the
-            # LINE Messaging API contract.
-            flex_msg_obj = {
-                "type": "flex",
-                "altText": "ポケモン図鑑",
-                "contents": bubble_contents,
-            }
-            # Build a plain dict payload matching LINE Messaging API to avoid
-            # SDK model serialization stripping flex fields when messages are
-            # provided as plain dicts. The adapter accepts dict payloads.
-            reply_payload = {
-                "replyToken": event.reply_token,
-                "messages": [flex_msg_obj],
-            }
-            self.safe_reply_message(reply_payload)
+            # Prefer constructing an SDK FlexMessage model. If the SDK is
+            # available, create_pokemon_zukan_flex_model returns a FlexMessage
+            # instance; otherwise it falls back to a dict bubble contents.
+            from ..infrastructure.line_model import create_pokemon_zukan_flex_model
+
+            flex_candidate = create_pokemon_zukan_flex_model(info)
+
+            # If SDK returned a FlexMessage model, wrap it into ReplyMessageRequest
+            # so that the SDK handles serialization reliably.
+            try:
+                from linebot.v3.messaging.models import ReplyMessageRequest
+                if hasattr(flex_candidate, 'dict') and flex_candidate.__class__.__name__ == 'FlexMessage':
+                    reply_message_request = ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[flex_candidate]
+                    )
+                    self.safe_reply_message(reply_message_request)
+                    return
+            except Exception:
+                # If SDK ReplyMessageRequest isn't available, fall back to dict path
+                pass
+
+            # Fallback: flex_candidate is a dict bubble; send as plain dict payload
+            bubble_contents = flex_candidate if isinstance(flex_candidate, dict) else None
+            if bubble_contents is not None:
+                flex_msg_obj = {
+                    "type": "flex",
+                    "altText": "ポケモン図鑑",
+                    "contents": bubble_contents,
+                }
+                reply_payload = {
+                    "replyToken": event.reply_token,
+                    "messages": [flex_msg_obj],
+                }
+                self.safe_reply_message(reply_payload)
+                return
         else:
             from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
             reply_message_request = ReplyMessageRequest(

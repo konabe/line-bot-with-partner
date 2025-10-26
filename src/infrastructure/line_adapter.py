@@ -63,8 +63,9 @@ class LineMessagingAdapter(MessagingPort):
             except Exception:
                 logger.debug("reply payload: <unable to serialize>")
 
-            # Pass through final_payload (dict) or original object if messaging_api accepts it
-            # The underlying MessagingApi can accept dict payloads; prefer dicts for reliability.
+            # Use the SDK messaging_api exclusively. If caller provided a dict
+            # payload (preferred for flex), pass it through to the SDK's
+            # reply_message. Avoid direct HTTP requests from this adapter.
             if isinstance(final_payload, dict):
                 self.messaging_api.reply_message(final_payload)
             else:
@@ -79,11 +80,16 @@ class LineMessagingAdapter(MessagingPort):
             logger.warning("messaging_api is not initialized; skipping push_message")
             return
         try:
-            try:
-                logger.debug(f"push payload: {push_message_request.to_dict()}")
-            except Exception:
-                logger.debug("push payload: <unable to serialize>")
-            self.messaging_api.push_message(push_message_request)
+            # Prefer SDK messaging_api for push; accept dict payloads and
+            # pass them through to the SDK as-is.
+            if isinstance(push_message_request, dict):
+                self.messaging_api.push_message(push_message_request)
+            else:
+                try:
+                    logger.debug(f"push payload: {push_message_request.to_dict()}")
+                except Exception:
+                    logger.debug("push payload: <unable to serialize>")
+                self.messaging_api.push_message(push_message_request)
         except Exception as e:
             logger.error(f"Error when calling messaging_api.push_message: {e}")
             raise
