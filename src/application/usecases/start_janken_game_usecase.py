@@ -1,8 +1,12 @@
 from typing import Callable, Optional
+
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 
 from ..types import PostbackEventLike
 from ...domain.services.janken_game_master_service import JankenGameMasterService
+from ...infrastructure.logger import create_logger, Logger
+
+
 
 
 class StartJankenGameUsecase:
@@ -16,10 +20,12 @@ class StartJankenGameUsecase:
         safe_reply_message: Callable[[ReplyMessageRequest], None],
         profile_getter: Callable[[str], Optional[str]],
         janken_service: Optional[JankenGameMasterService] = None,
+        logger: Optional[Logger] = None,
     ):
         self._safe_reply = safe_reply_message
         self._profile_getter = profile_getter
         self._janken_service = janken_service or JankenGameMasterService()
+        self._logger: Logger = logger or create_logger(__name__)
 
     def execute(self, event: PostbackEventLike) -> None:
         """event を受け取り、じゃんけんのプレイを実行して返信を送信する。"""
@@ -37,6 +43,10 @@ class StartJankenGameUsecase:
             except Exception:
                 # プロファイル取得失敗は無視してラベルはデフォルトにする
                 display_name = None
+
+        # ログにプロフィール取得の結果を残す（None の場合は取得できなかった旨）
+        if user_id and not display_name:
+            self._logger.debug(f"profile_getter returned no display name for user_id={user_id}")
 
         user_label = f"あなた ({display_name})" if display_name else "あなた"
 
