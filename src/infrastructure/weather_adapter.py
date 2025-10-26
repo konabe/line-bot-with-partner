@@ -1,21 +1,19 @@
 import os
-import logging
 import requests
-
-logger = logging.getLogger(__name__)
+from typing import Optional
+from .logger import Logger, create_logger
 
 
 class WeatherAdapter:
-    """OpenWeatherMapを使用した天気情報取得アダプター"""
-
-    def __init__(self):
+    def __init__(self, logger: Optional[Logger] = None):
         self.api_key = os.environ.get('OPENWEATHERMAP_API_KEY')
         self.base_url = "https://api.openweathermap.org/data/2.5/weather"
+        self.logger: Logger = logger or create_logger(__name__)
 
     def get_weather_text(self, location: str) -> str:
         """指定された地域の天気情報をOpenWeatherMapから取得します"""
         if not self.api_key:
-            logger.error("OPENWEATHERMAP_API_KEY is not set")
+            self.logger.error("OPENWEATHERMAP_API_KEY is not set")
             return "天気情報の取得に失敗しました。管理者にAPI設定を確認してもらってください。"
         
         try:
@@ -27,6 +25,11 @@ class WeatherAdapter:
             }
             
             response = requests.get(self.base_url, params=params, timeout=10)
+            # 404 の場合は都市が見つからないので明示的にハンドリングする
+            if response.status_code == 404:
+                self.logger.info(f"OpenWeatherMap: location not found: {location}")
+                return f"{location}の天気情報が見つかりませんでした。地域名を確認してください。"
+
             response.raise_for_status()
             data = response.json()
             
@@ -37,15 +40,15 @@ class WeatherAdapter:
             humidity = data['main']['humidity']
             
             return (f"{location}の天気: {weather_desc}\n"
-                   f"気温: {temp}℃ (体感 {feels_like}℃)\n"
-                   f"湿度: {humidity}%")
-                   
+                    f"気温: {temp}℃ (体感 {feels_like}℃)\n"
+                    f"湿度: {humidity}%")
+
         except requests.exceptions.RequestException as e:
-            logger.error(f"OpenWeatherMap API request failed: {e}")
+            self.logger.error(f"OpenWeatherMap API request failed: {e}")
             return f"{location}の天気情報の取得に失敗しました。ネットワークエラーまたはAPI制限に達した可能性があります。"
         except KeyError as e:
-            logger.error(f"OpenWeatherMap API response parsing failed: {e}")
+            self.logger.error(f"OpenWeatherMap API response parsing failed: {e}")
             return f"{location}の天気情報の解析に失敗しました。"
         except Exception as e:
-            logger.error(f"Unexpected error in weather fetch: {e}")
+            self.logger.error(f"Unexpected error in weather fetch: {e}")
             return f"{location}の天気情報の取得中に予期しないエラーが発生しました。"
