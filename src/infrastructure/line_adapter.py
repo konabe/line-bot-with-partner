@@ -25,11 +25,50 @@ class LineMessagingAdapter(MessagingPort):
             logger.warning("messaging_api is not initialized; skipping reply_message")
             return
         try:
+            # Accept several kinds of inputs:
+            # - dict payload matching LINE Messaging API (preferred for flex messages)
+            # - SDK model instances (have .to_dict or .dict)
+            # - ReplyMessageRequest pydantic model
+            final_payload = None
+            original = reply_message_request
+            # If user passed a dict, use it directly
+            if isinstance(reply_message_request, dict):
+                final_payload = reply_message_request
+            else:
+                # Try to call to_dict() (SDK models / ReplyMessageRequest)
+                try:
+                    final_payload = reply_message_request.to_dict()
+                except Exception:
+                    # Try pydantic dict()
+                    try:
+                        final_payload = reply_message_request.dict(by_alias=True, exclude_none=True)
+                    except Exception:
+                        final_payload = None
+
+            # If serialization produced a payload missing flex fields, but the
+            # original argument was a dict-like that contains them, prefer the
+            # original dict to preserve altText/contents for flex messages.
+            if final_payload and 'messages' in final_payload:
+                for idx, m in enumerate(final_payload.get('messages', [])):
+                    if isinstance(m, dict) and m.get('type') == 'flex':
+                        # Check presence of required flex fields
+                        if not m.get('altText') or not m.get('contents'):
+                            # If original was dict and had complete fields, prefer it
+                            if isinstance(original, dict):
+                                final_payload = original
+                                break
+
             try:
-                logger.debug(f"reply payload: {reply_message_request.to_dict()}")
+                logger.debug(f"reply payload: {final_payload}")
             except Exception:
                 logger.debug("reply payload: <unable to serialize>")
-            self.messaging_api.reply_message(reply_message_request)
+
+            # Pass through final_payload (dict) or original object if messaging_api accepts it
+            # The underlying MessagingApi can accept dict payloads; prefer dicts for reliability.
+            if isinstance(final_payload, dict):
+                self.messaging_api.reply_message(final_payload)
+            else:
+                self.messaging_api.reply_message(reply_message_request)
         except Exception as e:
             logger.error(f"Error when calling messaging_api.reply_message: {e}")
             # re-raise so caller (safe_reply_message) can react (e.g. fallback to push)

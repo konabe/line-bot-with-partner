@@ -80,6 +80,14 @@
 - `contents` は `create_pokemon_zukan_flex_dict(info)` が返す bubble 互換 dict。
 - altText は必須。空不可。
 
+注意（実装の挙動）:
+- SDK の Pydantic モデル経由で Flex メッセージを組み立てると、内部のシリアライズで
+  `altText` や `contents` が欠落するケースが確認されています。
+- 本リポジトリではこの問題を避けるため、`src.infrastructure.LineMessagingAdapter` が
+  生の dict ペイロード（上記のフォーマット）を受け取れるようになっています。
+  図鑑用のヘルパーは dict を返すため、`ReplyMessageRequest` を経由せずにこの dict を
+  そのまま `safe_reply_message` に渡すことを推奨します。
+
 ## 起動通知
 - 実行タイミング: Gunicorn でアプリが import された直後（`src/app.py`）。
 - 重複防止: `/tmp/line-bot-startup-notified` の存在でガード（1 コンテナ 1 回）。
