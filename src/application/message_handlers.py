@@ -4,6 +4,7 @@ from typing import Protocol, Callable
 from ..infrastructure.line_model import create_pokemon_zukan_flex_dict
 from .usecases.send_weather_usecase import SendWeatherUsecase
 from .usecases.send_meal_usecase import SendMealUsecase
+from .usecases.send_chat_response_usecase import SendChatResponseUsecase
 
 logger = logging.getLogger(__name__)
 
@@ -94,29 +95,8 @@ class MessageHandler:
             self.safe_reply_message(reply_message_request)
 
     def _handle_chatgpt(self, event, text: str) -> None:
-        """ChatGPTによる一般的な応答を処理します"""
-        logger.info("コマンド以外のメッセージを受信: ChatGPT に問い合わせます")
-        try:
-            response = self.domain_services.get_chatgpt_response(text)
-        except Exception as e:
-            logger.error(f"get_chatgpt_response error: {e}")
-            response = None
-        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-        if not response:
-            msg = (
-                "申し訳ないです。応答を生成できませんでした。"
-                "管理者に OPENAI_API_KEY の設定を確認してもらってください。"
-            )
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=msg)]
-            )
-        else:
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=response)]
-            )
-        self.safe_reply_message(reply_message_request)
+        logger.info("コマンド以外のメッセージを受信: usecase に委譲")
+        SendChatResponseUsecase(self.safe_reply_message, self.domain_services.get_chatgpt_response).execute(event, text)
 
     def _get_random_pokemon_zukan_info(self):
         """ランダムなポケモンの図鑑情報を取得します"""
@@ -168,15 +148,6 @@ class MessageHandler:
             logger.error(f"ポケモン情報取得エラー: {e}")
             return None
 
-    def _extract_location_from_weather_query(self, text: str) -> str:
-        """天気クエリから地名を抽出します"""
-        # 「○○の天気」パターンを検出
-        import re
-        match = re.search(r'(.+?)の天気', text)
-        if match:
-            location = match.group(1).strip()
-            return location
-        return ""
 
 
 
