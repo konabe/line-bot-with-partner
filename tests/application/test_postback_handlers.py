@@ -36,11 +36,19 @@ def test_handle_postback_success(monkeypatch):
     """ポストバックでじゃんけんが正常に処理され、reply が送信されること"""
     from src.application import postback_handlers
 
-    # configure shared fake to return deterministic result
-    FakeJankenGame.behavior = lambda uh: {'user_hand': uh, 'bot_hand': '✌️', 'result': 'あなたの勝ち！'}
-    FakeJankenGame.instantiated_count = 0
+    # prepare fake service to return deterministic result
+    class FakeService:
+        instantiated_count = 0
 
-    monkeypatch.setattr(postback_handlers, 'JankenGame', FakeJankenGame)
+        def __init__(self):
+            FakeService.instantiated_count += 1
+
+        def play_and_make_reply(self, user_hand_input, user_label):
+            return (
+                f"{user_label}: {user_hand_input}\n"
+                f"Bot: ✌️\n"
+                f"結果: あなたの勝ち！"
+            )
 
     sent = []
 
@@ -57,7 +65,9 @@ def test_handle_postback_success(monkeypatch):
         def error(self, msg): pass
         def exception(self, msg): pass
 
-    handler = postback_handlers.PostbackHandler(_FakeLogger(), fake_safe_reply, lambda uid: 'Alice')
+    handler = postback_handlers.PostbackHandler(
+        _FakeLogger(), fake_safe_reply, lambda uid: 'Alice', janken_service=FakeService()
+    )
     handler.handle_postback(event)
 
     assert len(sent) == 1
@@ -72,13 +82,10 @@ def test_handle_postback_invalid_hand(monkeypatch):
     """無効な手の場合、エラーメッセージが reply されること"""
     from src.application import postback_handlers
 
-    def raise_invalid(user_hand):
-        raise ValueError(f"無効な手です: {user_hand}")
-
-    FakeJankenGame.behavior = raise_invalid
-    FakeJankenGame.instantiated_count = 0
-
-    monkeypatch.setattr(postback_handlers, 'JankenGame', FakeJankenGame)
+    # fake service that returns an error reply for invalid hand
+    class FakeServiceErr:
+        def play_and_make_reply(self, user_hand_input, user_label):
+            return f"{user_label}: {user_hand_input}\nエラー: 無効な手です: {user_hand_input}"
 
     sent = []
 
@@ -94,7 +101,7 @@ def test_handle_postback_invalid_hand(monkeypatch):
         def error(self, msg): pass
         def exception(self, msg): pass
 
-    handler = postback_handlers.PostbackHandler(_FakeLogger(), fake_safe_reply, lambda uid: 'Alice')
+    handler = postback_handlers.PostbackHandler(_FakeLogger(), fake_safe_reply, lambda uid: 'Alice', janken_service=FakeServiceErr())
     handler.handle_postback(event)
 
     assert len(sent) == 1
@@ -108,11 +115,15 @@ def test_handle_postback_non_janken(monkeypatch):
     """janken: で始まらないデータでは何も送信されないこと"""
     from src.application import postback_handlers
 
-    # Ensure fake is set but we can detect instantiation count
-    FakeJankenGame.behavior = lambda uh: {}
-    FakeJankenGame.instantiated_count = 0
+    # Ensure fake service would not be instantiated for non-janken postback
+    class FakeService:
+        instantiated_count = 0
 
-    monkeypatch.setattr(postback_handlers, 'JankenGame', FakeJankenGame)
+        def __init__(self):
+            FakeService.instantiated_count += 1
+
+        def play_and_make_reply(self, user_hand_input, user_label):
+            return ''
 
     sent = []
 
@@ -128,9 +139,11 @@ def test_handle_postback_non_janken(monkeypatch):
         def error(self, msg): pass
         def exception(self, msg): pass
 
-    handler = postback_handlers.PostbackHandler(_FakeLogger(), fake_safe_reply, lambda uid: 'Alice')
+    # Pass a fake service instance but it should not be used
+    handler = postback_handlers.PostbackHandler(_FakeLogger(), fake_safe_reply, lambda uid: 'Alice', janken_service=FakeService())
     handler.handle_postback(event)
 
-    # Should not have called safe_reply_message nor instantiated JankenGame
+    # Should not have called safe_reply_message nor instantiated service beyond construction
     assert sent == []
-    assert FakeJankenGame.instantiated_count == 0
+    # instantiated_count may be 1 because we explicitly created one to pass in; ensure no extra instantiation
+    assert FakeService.instantiated_count == 1

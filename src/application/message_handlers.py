@@ -1,6 +1,7 @@
 import logging
 import requests
 from linebot.v3.messaging.models import TemplateMessage, ButtonsTemplate, PostbackAction
+from .usecases.send_janken_options_usecase import SendJankenOptionsUsecase
 from typing import Protocol, Dict, Any, Callable
 from src.infrastructure.line_model import create_pokemon_zukan_flex_dict
 from src.domain import OpenAIClient
@@ -194,26 +195,8 @@ class MessageHandler:
         self.safe_reply_message(reply_message_request)
 
     def _handle_janken(self, event) -> None:
-        """じゃんけんリクエストを処理します"""
-        logger.info("じゃんけんテンプレートを送信")
-        template = TemplateMessage(
-            alt_text="じゃんけんしましょう！",
-            template=ButtonsTemplate(
-                title="じゃんけん",
-                text="どれを出しますか？",
-                actions=[
-                    PostbackAction(label="✊ グー", data="janken:✊"),
-                    PostbackAction(label="✌️ チョキ", data="janken:✌️"),
-                    PostbackAction(label="✋ パー", data="janken:✋")
-                ]
-            )
-        )
-        from linebot.v3.messaging.models import ReplyMessageRequest
-        reply_message_request = ReplyMessageRequest(
-            reply_token=event.reply_token,
-            messages=[template]
-        )
-        self.safe_reply_message(reply_message_request)
+        logger.info("じゃんけんテンプレートを送信 (usecase に委譲)")
+        SendJankenOptionsUsecase(self.safe_reply_message).execute(event)
 
     def _handle_meal(self, event) -> None:
         """今日のご飯リクエストを処理します"""

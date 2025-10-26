@@ -44,31 +44,12 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
         return message_handler_instance.handle_message(event)
 
     # Instantiate PostbackHandler with injected logger and safe_reply_message
-    # profile_getter: lazily use requests to call LINE profile API if possible.
-    def _profile_getter(user_id: str) -> str | None:
-        import os
-        try:
-            import requests
-        except Exception:
-            logger.debug("requests not available; skipping profile fetch")
-            return None
+    # profile_getter is implemented in the infrastructure layer
+    from src.infrastructure.profiles import get_display_name_from_line_profile
 
-        token = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
-        if not token or not user_id:
-            return None
-        try:
-            resp = requests.get(
-                f"https://api.line.me/v2/bot/profile/{user_id}",
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=2,
-            )
-            if resp.status_code == 200:
-                return resp.json().get('displayName')
-        except Exception as e:
-            logger.error(f"Failed to fetch profile for {user_id}: {e}")
-        return None
-
-    _postback_handler_instance = PostbackHandler(create_logger(__name__), safe_reply_message, _profile_getter)
+    _postback_handler_instance = PostbackHandler(
+        create_logger(__name__), safe_reply_message, get_display_name_from_line_profile
+    )
 
     def postback_handler(event):
         return _postback_handler_instance.handle_postback(event)

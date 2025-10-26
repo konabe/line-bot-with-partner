@@ -6,8 +6,6 @@ class _Postback(Protocol):
 
 
 class _Source(Protocol):
-    # LINE SDKs may expose either `user_id` or `userId` depending on naming conventions
-    user_id: Optional[str]
     userId: Optional[str]
 
 
