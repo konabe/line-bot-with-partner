@@ -35,7 +35,7 @@ class StartJankenGameUsecase:
 
         user_hand_input: str = data.split(":", 1)[1]
 
-        user_id = getattr(event.source, 'userId', None)
+        user_id = event.source.user_id
         display_name: Optional[str] = None
         if user_id:
             try:

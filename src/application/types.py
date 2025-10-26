@@ -6,7 +6,7 @@ class _Postback(Protocol):
 
 
 class _Source(Protocol):
-    userId: Optional[str]
+    user_id: Optional[str]
 
 
 """LINE のポストバックイベントの型を表すプロトコルクラス"""
