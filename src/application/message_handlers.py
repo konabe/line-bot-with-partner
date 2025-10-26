@@ -3,6 +3,7 @@ from .usecases.send_janken_options_usecase import SendJankenOptionsUsecase
 from typing import Protocol, Callable
 from ..infrastructure.line_model import create_pokemon_zukan_flex_dict
 from .usecases.send_weather_usecase import SendWeatherUsecase
+from .usecases.send_meal_usecase import SendMealUsecase
 
 logger = logging.getLogger(__name__)
 
@@ -59,29 +60,8 @@ class MessageHandler:
         SendJankenOptionsUsecase(self.safe_reply_message).execute(event)
 
     def _handle_meal(self, event) -> None:
-        """今日のご飯リクエストを処理します"""
-        logger.info("今日のご飯リクエストを受信: ChatGPT に問い合わせます")
-        try:
-            suggestion = self.domain_services.get_chatgpt_meal_suggestion()
-        except Exception as e:
-            logger.error(f"get_chatgpt_meal_suggestion error: {e}")
-            suggestion = None
-        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-        if not suggestion:
-            msg = (
-                "申し訳ないです。おすすめを取得できませんでした。"
-                " 管理者に OPENAI_API_KEY の設定を確認てもらってください。"
-            )
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=msg)]
-            )
-        else:
-            reply_message_request = ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=suggestion)]
-            )
-        self.safe_reply_message(reply_message_request)
+        logger.info("今日のご飯リクエストを受信: usecase に委譲")
+        SendMealUsecase(self.safe_reply_message, self.domain_services.get_chatgpt_meal_suggestion).execute(event)
 
     def _handle_pokemon(self, event) -> None:
         """ポケモンリクエストを処理します"""
