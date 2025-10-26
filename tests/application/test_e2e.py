@@ -78,6 +78,8 @@ def test_callback_pokemon_flow():
     default_domain_services = SimpleNamespace(
         get_chatgpt_meal_suggestion=lambda: _get_openai_client().get_chatgpt_meal_suggestion(),
         get_chatgpt_response=lambda text: _get_openai_client().get_chatgpt_response(text),
+        get_weather_text=lambda location: '東京: 晴れ',
+        weather_adapter=SimpleNamespace(get_weather_text=lambda location: '東京: 晴れ'),
     )
 
     handler = MessageHandler(mock.reply_message, default_domain_services)

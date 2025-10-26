@@ -1,10 +1,8 @@
 import logging
-import requests
-from linebot.v3.messaging.models import TemplateMessage, ButtonsTemplate, PostbackAction
 from .usecases.send_janken_options_usecase import SendJankenOptionsUsecase
-from typing import Protocol, Dict, Any, Callable
+from typing import Protocol, Callable
 from src.infrastructure.line_model import create_pokemon_zukan_flex_dict
-from src.domain import OpenAIClient
+from .usecases.send_weather_usecase import SendWeatherUsecase
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +11,8 @@ class DomainServices(Protocol):
     """Domain層サービスのインターフェース"""
     get_chatgpt_meal_suggestion: Callable[[], str]
     get_chatgpt_response: Callable[[str], str]
-    get_weather_text: Callable[[str], str]
+    # weather_adapter: object that provides get_weather_text(location: str) -> str
+    weather_adapter: object
 
 
 class MessageHandler:
@@ -52,21 +51,8 @@ class MessageHandler:
 
 
     def _handle_weather(self, event, text: str) -> None:
-        """天気リクエストを処理します"""
-        logger.info("天気リクエスト検出")
-        loc = self._extract_location_from_weather_query(text)
-        if loc:
-            logger.debug(f"位置解決: {loc}")
-            reply_text = self.domain_services.get_weather_text(loc)
-        else:
-            logger.debug("位置未指定のため東京天気を返す")
-            reply_text = self.domain_services.get_weather_text('東京')
-        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-        reply_message_request = ReplyMessageRequest(
-            reply_token=event.reply_token,
-            messages=[TextMessage(text=reply_text)]
-        )
-        self.safe_reply_message(reply_message_request)
+        logger.info("天気リクエスト検出: usecase に委譲")
+    SendWeatherUsecase(self.safe_reply_message, self.domain_services.weather_adapter).execute(event, text)
 
     def _handle_janken(self, event) -> None:
         logger.info("じゃんけんテンプレートを送信 (usecase に委譲)")
