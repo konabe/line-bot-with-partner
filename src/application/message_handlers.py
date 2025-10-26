@@ -1,13 +1,13 @@
 import logging
 from .usecases.send_janken_options_usecase import SendJankenOptionsUsecase
 from typing import Protocol, Callable
-from ..infrastructure.line_model import create_pokemon_zukan_flex_dict
 from .usecases.send_weather_usecase import SendWeatherUsecase
 from .usecases.send_meal_usecase import SendMealUsecase
 from .usecases.send_chat_response_usecase import SendChatResponseUsecase
+from ..infrastructure.line_model.zukan_flex import create_pokemon_zukan_button_template
+from linebot.v3.messaging import models
 
 logger = logging.getLogger(__name__)
-
 
 class DomainServices(Protocol):
     """Domain層サービスのインターフェース"""
@@ -21,13 +21,6 @@ class MessageHandler:
     """LINEメッセージイベントを処理するハンドラークラス"""
 
     def __init__(self, safe_reply_message: Callable, domain_services: DomainServices):
-        """
-        MessageHandlerの初期化
-
-        Args:
-            safe_reply_message: 安全なメッセージ送信関数
-            domain_services: ドメインサービス（省略時はデフォルトを使用）
-        """
         self.safe_reply_message = safe_reply_message
         self.domain_services = domain_services
 
@@ -65,51 +58,43 @@ class MessageHandler:
         SendMealUsecase(self.safe_reply_message, self.domain_services.get_chatgpt_meal_suggestion).execute(event)
 
     def _handle_pokemon(self, event) -> None:
-        """ポケモンリクエストを処理します"""
+        """ポケモンリクエストを処理します。図鑑情報を取得して TemplateMessage (Buttons) を送信します。"""
         logger.info("ポケモンリクエスト受信。図鑑風情報を返信")
         info = self._get_random_pokemon_zukan_info()
-        if info:
-            # Prefer constructing an SDK FlexMessage model. If the SDK is
-            # available, create_pokemon_zukan_flex_model returns a FlexMessage
-            # instance; otherwise it falls back to a dict bubble contents.
-            from ..infrastructure.line_model import create_pokemon_zukan_flex_model
+        if not info:
+            reply_message_request = ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="ポケモン図鑑情報の取得に失敗しました。")]
+            )
+            self.safe_reply_message(reply_message_request)
+            return
 
-            flex_candidate = create_pokemon_zukan_flex_model(info)
-
-            # If SDK returned a FlexMessage model, wrap it into ReplyMessageRequest
-            # so that the SDK handles serialization reliably.
+        try:
+            candidate = create_pokemon_zukan_button_template(info)
             try:
-                from linebot.v3.messaging.models import ReplyMessageRequest
-                if hasattr(flex_candidate, 'dict') and flex_candidate.__class__.__name__ == 'FlexMessage':
+                if hasattr(candidate, 'dict') and candidate.__class__.__name__ in ('TextMessage', 'TemplateMessage'):
                     reply_message_request = ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[flex_candidate]
+                        messages=[candidate]
                     )
                     self.safe_reply_message(reply_message_request)
                     return
             except Exception:
-                # If SDK ReplyMessageRequest isn't available, fall back to dict path
+                # continue to dict handling below
                 pass
 
-            # Fallback: flex_candidate is a dict bubble; send as plain dict payload
-            bubble_contents = flex_candidate if isinstance(flex_candidate, dict) else None
-            if bubble_contents is not None:
-                flex_msg_obj = {
-                    "type": "flex",
-                    "altText": "ポケモン図鑑",
-                    "contents": bubble_contents,
-                }
-                reply_payload = {
-                    "replyToken": event.reply_token,
-                    "messages": [flex_msg_obj],
-                }
-                self.safe_reply_message(reply_payload)
-                return
-        else:
+            sdk_req = models.ReplyMessageRequest.parse_obj({
+                'replyToken': event.reply_token,
+                'messages': [candidate]
+            })
+            self.safe_reply_message(sdk_req)
+            return
+        except Exception as e:
+            logger.error(f"ポケモンメッセージ送信エラー: {e}")
             from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
             reply_message_request = ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text="ポケモン図鑑情報の取得に失敗しました。")]
+                messages=[TextMessage(text="ポケモン図鑑情報の送信に失敗しました。")]
             )
             self.safe_reply_message(reply_message_request)
 
