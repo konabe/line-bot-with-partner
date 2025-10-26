@@ -78,20 +78,59 @@ class LineMessagingAdapter(MessagingPort):
 
                 if is_sdk:
                     try:
-                        from linebot.v3.messaging.models import ReplyMessageRequest
-                        # Try to parse API-style dict (camelCase keys) into the
-                        # SDK pydantic model. Use parse_obj (pydantic v1) or
-                        # model_validate (pydantic v2 shim) when available.
+                        # Build SDK models for each message to ensure required
+                        # fields (text, altText, contents) are present when
+                        # serialized by the SDK.
+                        from linebot.v3.messaging import models
+
+                        msgs = []
+                        for m in final_payload.get('messages', []):
+                            if not isinstance(m, dict):
+                                msgs.append(m)
+                                continue
+                            mtype = m.get('type')
+                            if mtype == 'text':
+                                try:
+                                    msgs.append(models.TextMessage(text=m.get('text')))
+                                except Exception:
+                                    msgs.append(m)
+                            elif mtype == 'flex':
+                                try:
+                                    contents = m.get('contents')
+                                    # Try to parse bubble contents to FlexBubble
+                                    if isinstance(contents, dict):
+                                        bubble = models.FlexBubble.parse_obj(contents)
+                                    else:
+                                        bubble = contents
+                                    flex_msg = models.FlexMessage(altText=m.get('altText', ''), contents=bubble)
+                                    msgs.append(flex_msg)
+                                except Exception:
+                                    try:
+                                        msgs.append(models.FlexMessage.parse_obj(m))
+                                    except Exception:
+                                        msgs.append(m)
+                            else:
+                                try:
+                                    msgs.append(models.Message.parse_obj(m))
+                                except Exception:
+                                    msgs.append(m)
+
+                        # Construct ReplyMessageRequest with snake_case args
+                        reply_token = final_payload.get('replyToken') or final_payload.get('reply_token')
+                        notification_disabled = final_payload.get('notificationDisabled', final_payload.get('notification_disabled', False))
                         try:
-                            sdk_req = ReplyMessageRequest.parse_obj(final_payload)
+                            sdk_req = models.ReplyMessageRequest(reply_token=reply_token, messages=msgs, notification_disabled=notification_disabled)
+                            self.messaging_api.reply_message(sdk_req)
                         except Exception:
-                            # fallback to direct construction (may require
-                            # snake_case keys)
-                            sdk_req = ReplyMessageRequest(**final_payload)
-                        self.messaging_api.reply_message(sdk_req)
+                            # Fallback to parse_obj which may accept camelCase dict
+                            try:
+                                sdk_req = models.ReplyMessageRequest.parse_obj(final_payload)
+                                self.messaging_api.reply_message(sdk_req)
+                            except Exception:
+                                # Last resort: pass original dict
+                                self.messaging_api.reply_message(final_payload)
                     except Exception:
-                        # If building the SDK model failed, pass the dict through
-                        # as a last resort.
+                        # If building SDK models failed entirely, pass dict through
                         self.messaging_api.reply_message(final_payload)
                 else:
                     # Keep previous behavior for test fakes and other non-SDK adapters
@@ -119,12 +158,50 @@ class LineMessagingAdapter(MessagingPort):
 
                 if is_sdk:
                     try:
-                        from linebot.v3.messaging.models import PushMessageRequest
+                        from linebot.v3.messaging import models
+
+                        msgs = []
+                        for m in push_message_request.get('messages', []):
+                            if not isinstance(m, dict):
+                                msgs.append(m)
+                                continue
+                            mtype = m.get('type')
+                            if mtype == 'text':
+                                try:
+                                    msgs.append(models.TextMessage(text=m.get('text')))
+                                except Exception:
+                                    msgs.append(m)
+                            elif mtype == 'flex':
+                                try:
+                                    contents = m.get('contents')
+                                    if isinstance(contents, dict):
+                                        bubble = models.FlexBubble.parse_obj(contents)
+                                    else:
+                                        bubble = contents
+                                    flex_msg = models.FlexMessage(altText=m.get('altText', ''), contents=bubble)
+                                    msgs.append(flex_msg)
+                                except Exception:
+                                    try:
+                                        msgs.append(models.FlexMessage.parse_obj(m))
+                                    except Exception:
+                                        msgs.append(m)
+                            else:
+                                try:
+                                    msgs.append(models.Message.parse_obj(m))
+                                except Exception:
+                                    msgs.append(m)
+
+                        to = push_message_request.get('to')
+                        notification_disabled = push_message_request.get('notificationDisabled', push_message_request.get('notification_disabled', False))
                         try:
-                            sdk_req = PushMessageRequest.parse_obj(push_message_request)
+                            sdk_req = models.PushMessageRequest(to=to, messages=msgs, notification_disabled=notification_disabled)
+                            self.messaging_api.push_message(sdk_req)
                         except Exception:
-                            sdk_req = PushMessageRequest(**push_message_request)
-                        self.messaging_api.push_message(sdk_req)
+                            try:
+                                sdk_req = models.PushMessageRequest.parse_obj(push_message_request)
+                                self.messaging_api.push_message(sdk_req)
+                            except Exception:
+                                self.messaging_api.push_message(push_message_request)
                     except Exception:
                         self.messaging_api.push_message(push_message_request)
                 else:
