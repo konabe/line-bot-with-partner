@@ -52,7 +52,7 @@ class MessageHandler:
 
     def _handle_weather(self, event, text: str) -> None:
         logger.info("天気リクエスト検出: usecase に委譲")
-    SendWeatherUsecase(self.safe_reply_message, self.domain_services.weather_adapter).execute(event, text)
+        SendWeatherUsecase(self.safe_reply_message, self.domain_services.weather_adapter).execute(event, text)
 
     def _handle_janken(self, event) -> None:
         logger.info("じゃんけんテンプレートを送信 (usecase に委譲)")
