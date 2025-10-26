@@ -1,4 +1,38 @@
 {
+  "chat.tools.terminal.autoApprove": {
+    "PYTHONPATH=. pytest -q": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "source venv/Scripts/activate": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "C:/Users/rtkon/workspace/llm-janken/.venv/Scripts/python.exe main.py": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "git commit": true,
+    "mv": true,
+    "python": true,
+    "git add": true,
+    "gh": true,
+    "source": true,
+    "pip": true,
+    "black": true,
+    "git push": true,
+    "flake8": true,
+    "cd /workspaces/line-bot-with-partner && PYTHONPATH=. pytest -q": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "cd /workspaces/line-bot-with-partner && PYTHONPATH=. pytest": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "PYTHONPATH=.": true,
+    "pytest": true
+  },
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python-envs.pythonProjects": [],
   "python.analysis.typeCheckingMode": "off",
