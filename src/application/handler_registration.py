@@ -15,7 +15,6 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
     register_routes(app, handler, safe_reply_message)
 
     # デフォルトの DomainServices をここで生成（遅延で OpenAIClient を生成）
-    from src.domain import UMIGAME_STATE, is_closed_question
     from src.domain import OpenAIClient
     from src.infrastructure.weather_adapter import WeatherAdapter
     from types import SimpleNamespace
@@ -29,10 +28,6 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
         return _openai_holder["client"]
 
     default_domain_services = SimpleNamespace(
-        UMIGAME_STATE=UMIGAME_STATE,
-        is_closed_question=is_closed_question,
-        generate_umigame_puzzle=lambda: _get_openai_client().generate_umigame_puzzle(),
-        call_openai_yesno_with_secret=lambda text, secret: _get_openai_client().call_openai_yesno_with_secret(text, secret),
         get_chatgpt_meal_suggestion=lambda: _get_openai_client().get_chatgpt_meal_suggestion(),
         get_chatgpt_response=lambda text: _get_openai_client().get_chatgpt_response(text),
         get_weather_text=lambda location: _weather_adapter.get_weather_text(location),

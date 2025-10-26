@@ -55,7 +55,7 @@ python app.py
 このリポジトリでは以前トップレベルに shim（`src/*.py` で domain/ 以下の実装を再エクスポートするファイル）を置いて互換性を保っていました。shim を削除する際は次の点を必ず守ってください。
 
 1. tracked（git によって追跡されている）ファイルを削除する場合は必ず `git rm` を使ってください。
-	- 例: `git rm src/umigame.py && git commit -m "Remove shim"`
+	- 例: `git rm src/some_shim.py && git commit -m "Remove shim"`
 	- ファイルを単に削除してコミットを作成しないと、index に古いファイルが残ることがあります。
 2. 削除後にローカルで次のコマンドで確認してください。
 
@@ -63,7 +63,7 @@ python app.py
 # 変更がステージングされていない場合は git status で確認
 git status --porcelain
 # git にまだ残っている tracked ファイルを確認
-git ls-files 'src/*' | grep umigame || true
+git ls-files 'src/*' | grep some_shim || true
 ```
 
 3. テストは必ず `PYTHONPATH=. pytest` で動作確認してください（CI と同じ環境で実行するため）。

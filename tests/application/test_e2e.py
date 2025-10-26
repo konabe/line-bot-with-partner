@@ -60,7 +60,7 @@ def test_callback_pokemon_flow():
     from tests.support.mock_adapter import MockMessagingAdapter
     from src.application.message_handlers import MessageHandler
     from types import SimpleNamespace
-    from src.domain import UMIGAME_STATE, is_closed_question, OpenAIClient
+    from src.domain import OpenAIClient
 
     # register mock adapter
     mock = MockMessagingAdapter()
@@ -76,10 +76,6 @@ def test_callback_pokemon_flow():
         return _openai_holder["client"]
 
     default_domain_services = SimpleNamespace(
-        UMIGAME_STATE=UMIGAME_STATE,
-        is_closed_question=is_closed_question,
-        generate_umigame_puzzle=lambda: _get_openai_client().generate_umigame_puzzle(),
-        call_openai_yesno_with_secret=lambda text, secret: _get_openai_client().call_openai_yesno_with_secret(text, secret),
         get_chatgpt_meal_suggestion=lambda: _get_openai_client().get_chatgpt_meal_suggestion(),
         get_chatgpt_response=lambda text: _get_openai_client().get_chatgpt_response(text),
     )
