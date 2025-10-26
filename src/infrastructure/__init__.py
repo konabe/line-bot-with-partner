@@ -57,12 +57,13 @@ class MessagingInfrastructure:
     def safe_push_message(self, push_message_request):
         if self._adapter is None:
             _logger.warning("safe_push_message called but no messaging adapter is registered; skipping push")
-            return
+            return False
         try:
             self._adapter.push_message(push_message_request)
+            return True
         except Exception as e:
             _logger.error(f"Exception in safe_push_message: {e}")
-            return
+            return False
 
 
 # シングルトンインスタンス
@@ -82,5 +83,5 @@ def safe_reply_message(reply_message_request, fallback_to: str = None) -> bool:
 
 
 def safe_push_message(push_message_request):
-    _messaging_infrastructure.safe_push_message(push_message_request)
+    return _messaging_infrastructure.safe_push_message(push_message_request)
 

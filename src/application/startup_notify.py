@@ -29,14 +29,27 @@ def notify_startup_if_configured(
         messages=[TextMessage(text=message)],
     )
 
+    # safe_push_message now returns a bool; check the result to log correctly.
+    success = False
     try:
-        safe_push_message(push_message_request)
+        success = safe_push_message(push_message_request)
+    except Exception as exc:  # pragma: no cover - safe_push_message should not raise
+        if logger:
+            logger.error(f"safe_push_message raised unexpected exception: {exc}")
+        success = False
+
+    # Backwards compatibility: if safe_push_message returns None (older
+    # implementations), treat that as success (previous behavior).
+    if success is None:
+        success = True
+
+    if success:
         if logger:
             logger.info(f"startup notification sent to admin {admin_id}")
         return True
-    except Exception as exc:  # pragma: no cover - exercised in tests
+    else:
         if logger:
-            logger.error(f"failed to send startup notification: {exc}")
+            logger.error(f"failed to send startup notification to admin {admin_id}")
         return False
 
 

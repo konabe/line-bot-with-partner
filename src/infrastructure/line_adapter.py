@@ -62,12 +62,32 @@ class LineMessagingAdapter(MessagingPort):
                 logger.debug(f"reply payload: {final_payload}")
             except Exception:
                 logger.debug("reply payload: <unable to serialize>")
-
             # Use the SDK messaging_api exclusively. If caller provided a dict
-            # payload (preferred for flex), pass it through to the SDK's
-            # reply_message. Avoid direct HTTP requests from this adapter.
+            # payload (preferred for flex), try to construct the SDK's
+            # ReplyMessageRequest model from the dict so SDK serialization is
+            # consistent. If model construction fails, fall back to passing the
+            # dict through (the SDK may still accept dicts).
             if isinstance(final_payload, dict):
-                self.messaging_api.reply_message(final_payload)
+                # If messaging_api looks like the real SDK, build the
+                # ReplyMessageRequest model to ensure proper serialization.
+                # Otherwise (tests, fakes), pass the dict through unchanged.
+                try:
+                    is_sdk = getattr(self.messaging_api.__class__, '__module__', '').startswith('linebot.v3')
+                except Exception:
+                    is_sdk = False
+
+                if is_sdk:
+                    try:
+                        from linebot.v3.messaging.models import ReplyMessageRequest
+                        sdk_req = ReplyMessageRequest(**final_payload)
+                        self.messaging_api.reply_message(sdk_req)
+                    except Exception:
+                        # If building the SDK model failed, pass the dict through
+                        # as a last resort.
+                        self.messaging_api.reply_message(final_payload)
+                else:
+                    # Keep previous behavior for test fakes and other non-SDK adapters
+                    self.messaging_api.reply_message(final_payload)
             else:
                 self.messaging_api.reply_message(reply_message_request)
         except Exception as e:
@@ -80,10 +100,24 @@ class LineMessagingAdapter(MessagingPort):
             logger.warning("messaging_api is not initialized; skipping push_message")
             return
         try:
-            # Prefer SDK messaging_api for push; accept dict payloads and
-            # pass them through to the SDK as-is.
+            # Prefer SDK messaging_api for push; if caller provided a dict
+            # try to construct PushMessageRequest so SDK serializes it
+            # consistently. Fall back to passing the dict through if needed.
             if isinstance(push_message_request, dict):
-                self.messaging_api.push_message(push_message_request)
+                try:
+                    is_sdk = getattr(self.messaging_api.__class__, '__module__', '').startswith('linebot.v3')
+                except Exception:
+                    is_sdk = False
+
+                if is_sdk:
+                    try:
+                        from linebot.v3.messaging.models import PushMessageRequest
+                        sdk_req = PushMessageRequest(**push_message_request)
+                        self.messaging_api.push_message(sdk_req)
+                    except Exception:
+                        self.messaging_api.push_message(push_message_request)
+                else:
+                    self.messaging_api.push_message(push_message_request)
             else:
                 try:
                     logger.debug(f"push payload: {push_message_request.to_dict()}")
