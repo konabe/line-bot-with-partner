@@ -1,35 +1,23 @@
+from linebot.v3.messaging import models
+
 def create_pokemon_zukan_button_template(info):
-    """SDK の TemplateMessage (ButtonsTemplate) を返す。SDK が無い場合は dict を返す。"""
-    try:
-        from linebot.v3.messaging import models
-
-        type_text = ' / '.join(info.get('types') or []) if info.get('types') else '不明'
-        image_url = info.get('image_url') or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png"
-        title = f"No.{info.get('zukan_no')} {info.get('name')}"
-
-        template = models.ButtonsTemplate(
-            title=title,
-            text=f"タイプ: {type_text}",
-            thumbnail_image_url=image_url,
-            actions=[models.URIAction(label='画像を見る', uri=image_url)],
-        )
-        return models.TemplateMessage(alt_text='ポケモン図鑑', template=template)
-    except Exception:
-        # SDK が利用できない、またはモデル生成に失敗した場合は互換の dict を返す
-        return create_pokemon_zukan_flex_dict(info)
-
-
-def create_pokemon_zukan_flex_dict(info):
-    """図鑑情報を含むテキストメッセージ dict を返す（互換関数）。"""
     type_text = ' / '.join(info.get('types') or []) if info.get('types') else '不明'
     image_url = info.get('image_url') or "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png"
-    text = (
-        f"No.{info.get('zukan_no')} {info.get('name')}\n"
-        f"タイプ: {type_text}\n"
-        f"進化: {info.get('evolution')}\n"
-        f"画像: {image_url}"
+    zukan_no = info.get('zukan_no') or 0
+    # zero-pad to 4 digits, e.g. 25 -> '0025'
+    try:
+        zukan_id_str = f"{int(zukan_no):04d}"
+    except Exception:
+        zukan_id_str = str(zukan_no)
+
+    title = f"No.{zukan_no} {info.get('name')}"
+
+    detail_url = f"https://zukan.pokemon.co.jp/detail/{zukan_id_str}"
+
+    template = models.ButtonsTemplate(
+        title=title,
+        text=f"タイプ: {type_text}",
+        thumbnail_image_url=image_url,
+        actions=[models.URIAction(label='図鑑で見る', uri=detail_url)],
     )
-    return {
-        'type': 'text',
-        'text': text,
-    }
+    return models.TemplateMessage(alt_text='ポケモン図鑑', template=template)
