@@ -1,7 +1,6 @@
 import os
 import logging
 import requests
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +10,7 @@ class WeatherAdapter:
 
     def __init__(self):
         self.api_key = os.environ.get('OPENWEATHERMAP_API_KEY')
-        self.base_url = "http://api.openweathermap.org/data/2.5/weather"
+        self.base_url = "https://api.openweathermap.org/data/2.5/weather"
 
     def get_weather_text(self, location: str) -> str:
         """指定された地域の天気情報をOpenWeatherMapから取得します"""
