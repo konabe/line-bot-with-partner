@@ -79,7 +79,15 @@ class LineMessagingAdapter(MessagingPort):
                 if is_sdk:
                     try:
                         from linebot.v3.messaging.models import ReplyMessageRequest
-                        sdk_req = ReplyMessageRequest(**final_payload)
+                        # Try to parse API-style dict (camelCase keys) into the
+                        # SDK pydantic model. Use parse_obj (pydantic v1) or
+                        # model_validate (pydantic v2 shim) when available.
+                        try:
+                            sdk_req = ReplyMessageRequest.parse_obj(final_payload)
+                        except Exception:
+                            # fallback to direct construction (may require
+                            # snake_case keys)
+                            sdk_req = ReplyMessageRequest(**final_payload)
                         self.messaging_api.reply_message(sdk_req)
                     except Exception:
                         # If building the SDK model failed, pass the dict through
@@ -112,7 +120,10 @@ class LineMessagingAdapter(MessagingPort):
                 if is_sdk:
                     try:
                         from linebot.v3.messaging.models import PushMessageRequest
-                        sdk_req = PushMessageRequest(**push_message_request)
+                        try:
+                            sdk_req = PushMessageRequest.parse_obj(push_message_request)
+                        except Exception:
+                            sdk_req = PushMessageRequest(**push_message_request)
                         self.messaging_api.push_message(sdk_req)
                     except Exception:
                         self.messaging_api.push_message(push_message_request)
