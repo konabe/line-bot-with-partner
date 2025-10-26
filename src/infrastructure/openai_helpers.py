@@ -2,6 +2,7 @@ import os
 import re
 import requests
 import datetime
+import json
 from zoneinfo import ZoneInfo
 from typing import Optional
 
@@ -62,8 +63,23 @@ class OpenAIClient:
             'temperature': 0.8,
         }
         try:
+            # ログはペイロードのみ（APIキー等のヘッダは出力しない）
+            try:
+                self.logger.debug("OpenAI request payload: %s", json.dumps(payload, ensure_ascii=False))
+            except Exception:
+                # payload が JSON 化できない場合は無視
+                pass
+
             resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
-            resp.raise_for_status()
+            # 詳細なエラーボディをログに残す（400系含む）
+            if resp.status_code >= 400:
+                # レスポンス本文をログに残すが、過度に長い場合は切り詰める
+                body = resp.text or ''
+                if len(body) > 2000:
+                    body = body[:2000] + '...[truncated]'
+                self.logger.error("OpenAI returned status %s: %s", resp.status_code, body)
+                raise OpenAIError(f"OpenAI error {resp.status_code}: {body}")
+
             data = resp.json()
             # 抽出の互換性を広く持たせる
             def _extract_text_from_response(data: dict) -> str:
@@ -135,16 +151,27 @@ class OpenAIClient:
             'Authorization': f'Bearer {self.api_key}',
             "Content-Type": "application/json"
         }
+        # combine system prompt and user message into a single input for Responses API
         payload = {
             'model': self.model,
-            'instruction': f"{system_prompt}",
-            'input': f"{user_message}",
+            'input': f"{system_prompt}\n\nUser: {user_message}",
             'max_output_tokens': 500,
             'temperature': 0.7,
         }
         try:
+            try:
+                self.logger.debug("OpenAI request payload: %s", json.dumps(payload, ensure_ascii=False))
+            except Exception:
+                pass
+
             resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
-            resp.raise_for_status()
+            if resp.status_code >= 400:
+                body = resp.text or ''
+                if len(body) > 2000:
+                    body = body[:2000] + '...[truncated]'
+                self.logger.error("OpenAI returned status %s: %s", resp.status_code, body)
+                raise OpenAIError(f"OpenAI error {resp.status_code}: {body}")
+
             data = resp.json()
 
             # reuse extraction logic
