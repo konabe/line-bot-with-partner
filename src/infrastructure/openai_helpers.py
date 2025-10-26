@@ -1,6 +1,8 @@
 import os
 import re
 import requests
+import datetime
+from zoneinfo import ZoneInfo
 from typing import Optional
 
 from .logger import Logger, create_logger
@@ -38,12 +40,16 @@ class OpenAIClient:
 
     def get_chatgpt_meal_suggestion(self):
         """料理のおすすめをChatGPTから取得"""
+        # 現在日時を取得してプロンプトに含める（提案内容を時間帯に合わせる手がかりにする）
+        # 東京タイムゾーンで現在日時を取得してプロンプトに含める
+        now = datetime.datetime.now(ZoneInfo("Asia/Tokyo"))
+        now_str = now.strftime('%Y-%m-%d %H:%M')
         prompt = (
+            f"現在の日時は {now_str} です。これを参考に、"
             "あなたは親切な料理アドバイザーです。ユーザーに今すぐ作れる料理のおすすめを3つ、"
             "簡単なレシピや調理時間（目安）と一言コメント付きで提案してください。日本語で答えてください。"
         )
         headers = {
-            OpenAIClient.CONTENT_TYPE_JSON: OpenAIClient.CONTENT_TYPE_JSON,
             'Authorization': f'Bearer {self.api_key}'
         }
         payload = {
@@ -77,7 +83,6 @@ class OpenAIClient:
             "話を広げるように心がけ、ユーザーとの会話を楽しんでください。"
         )
         headers = {
-            OpenAIClient.CONTENT_TYPE_JSON: OpenAIClient.CONTENT_TYPE_JSON,
             'Authorization': f'Bearer {self.api_key}'
         }
         payload = {
@@ -86,7 +91,7 @@ class OpenAIClient:
                 {'role': 'system', 'content': system_prompt},
                 {'role': 'user', 'content': user_message}
             ],
-            'max_tokens': 1000,
+            'max_tokens': 500,
             'temperature': 0.7,
         }
         try:
