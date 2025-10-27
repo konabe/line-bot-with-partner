@@ -1,11 +1,13 @@
-import logging
 from ..ports.messaging import MessagingPort
-
-logger = logging.getLogger(__name__)
+from .logger import create_logger, Logger
+from typing import Optional
 
 
 class LineMessagingAdapter(MessagingPort):
-    def __init__(self):
+    def __init__(self, logger: Optional[Logger] = None):
+        # logger can be injected for testing / customization. If not provided,
+        # create a StdLogger with this module's name.
+        self.logger: Logger = logger or create_logger(__name__)
         self.messaging_api = None
 
     def init(self, access_token: str):
@@ -18,11 +20,11 @@ class LineMessagingAdapter(MessagingPort):
             self.messaging_api = MessagingApi(_api_client)
         except Exception as e:
             self.messaging_api = None
-            logger.error(f"Failed to initialize LineMessagingAdapter: {e}")
+            self.logger.error(f"Failed to initialize LineMessagingAdapter: {e}")
 
     def reply_message(self, reply_message_request):
         if self.messaging_api is None:
-            logger.warning("messaging_api is not initialized; skipping reply_message")
+            self.logger.warning("messaging_api is not initialized; skipping reply_message")
             return
         try:
             # We assume reply_message is called with SDK model instances
@@ -38,9 +40,9 @@ class LineMessagingAdapter(MessagingPort):
                     except Exception:
                         payload_for_log = None
                 try:
-                    logger.debug(f"reply payload: {payload_for_log}")
+                    self.logger.debug(f"reply payload: {payload_for_log}")
                 except Exception:
-                    logger.debug("reply payload: <unable to serialize>")
+                    self.logger.debug("reply payload: <unable to serialize>")
 
                 # Directly send the model/request object to the SDK
                 self.messaging_api.reply_message(reply_message_request)
@@ -57,13 +59,13 @@ class LineMessagingAdapter(MessagingPort):
                     # Give up and re-raise the original error to let caller handle
                     raise
         except Exception as e:
-            logger.error(f"Error when calling messaging_api.reply_message: {e}")
+            self.logger.error(f"Error when calling messaging_api.reply_message: {e}")
             # re-raise so caller (safe_reply_message) can react (e.g. fallback to push)
             raise
 
     def push_message(self, push_message_request):
         if self.messaging_api is None:
-            logger.warning("messaging_api is not initialized; skipping push_message")
+            self.logger.warning("messaging_api is not initialized; skipping push_message")
             return
         try:
             # Assume push_message is called with SDK model instances (PushMessageRequest
@@ -72,12 +74,12 @@ class LineMessagingAdapter(MessagingPort):
             # PushMessageRequest and resend as a fallback.
             try:
                 try:
-                    logger.debug(f"push payload: {push_message_request.to_dict()}")
+                    self.logger.debug(f"push payload: {push_message_request.to_dict()}")
                 except Exception:
                     try:
-                        logger.debug(f"push payload: {push_message_request.dict(by_alias=True, exclude_none=True)}")
+                        self.logger.debug(f"push payload: {push_message_request.dict(by_alias=True, exclude_none=True)}")
                     except Exception:
-                        logger.debug("push payload: <unable to serialize>")
+                        self.logger.debug("push payload: <unable to serialize>")
 
                 self.messaging_api.push_message(push_message_request)
                 return
@@ -92,5 +94,5 @@ class LineMessagingAdapter(MessagingPort):
                     # Re-raise the original exception to let caller handle it
                     raise
         except Exception as e:
-            logger.error(f"Error when calling messaging_api.push_message: {e}")
+            self.logger.error(f"Error when calling messaging_api.push_message: {e}")
             raise
