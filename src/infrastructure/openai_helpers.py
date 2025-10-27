@@ -60,7 +60,7 @@ class OpenAIClient:
         try:
             # ログはペイロードのみ（APIキー等のヘッダは出力しない）
             try:
-                self.logger.debug("OpenAI request payload: %s", json.dumps(payload, ensure_ascii=False))
+                self.logger.debug(f"OpenAI request payload: {json.dumps(payload, ensure_ascii=False)}")
             except Exception:
                 # payload が JSON 化できない場合は無視
                 pass
@@ -72,7 +72,7 @@ class OpenAIClient:
                 body = resp.text or ''
                 if len(body) > 2000:
                     body = body[:2000] + '...[truncated]'
-                self.logger.error("OpenAI returned status %s: %s", resp.status_code, body)
+                self.logger.error(f"OpenAI returned status {resp.status_code}: {body}")
                 raise OpenAIError(f"OpenAI error {resp.status_code}: {body}")
 
             data = resp.json()
@@ -112,7 +112,7 @@ class OpenAIClient:
         }
         try:
             try:
-                self.logger.debug("OpenAI request payload: %s", json.dumps(payload, ensure_ascii=False))
+                self.logger.debug(f"OpenAI request payload: {json.dumps(payload, ensure_ascii=False)}")
             except Exception:
                 pass
 
@@ -121,7 +121,7 @@ class OpenAIClient:
                 body = resp.text or ''
                 if len(body) > 2000:
                     body = body[:2000] + '...[truncated]'
-                self.logger.error("OpenAI returned status %s: %s", resp.status_code, body)
+                self.logger.error(f"OpenAI returned status {resp.status_code}: {body}")
                 raise OpenAIError(f"OpenAI error {resp.status_code}: {body}")
 
             data = resp.json()

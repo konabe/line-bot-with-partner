@@ -3,11 +3,6 @@ from .logger import create_logger, Logger
 from typing import Optional
 import os
 
-
-# Module-level logger for helper functions moved into this module
-logger = create_logger(__name__)
-
-
 class LineMessagingAdapter(MessagingPort):
     def __init__(self, logger: Optional[Logger] = None):
         # logger can be injected for testing / customization. If not provided,
