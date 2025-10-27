@@ -23,7 +23,7 @@ class MessagingInfrastructure:
             # lazy import default adapter
             try:
                 _logger.debug("No messaging adapter registered, attempting to import LineMessagingAdapter")
-                from .line_adapter import LineMessagingAdapter
+                from .adapters.line_adapter import LineMessagingAdapter
                 self.register_adapter(LineMessagingAdapter())
                 _logger.info("LineMessagingAdapter registered")
             except Exception as e:

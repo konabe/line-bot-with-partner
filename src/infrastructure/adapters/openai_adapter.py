@@ -6,7 +6,7 @@ import json
 from zoneinfo import ZoneInfo
 from typing import Optional
 
-from .logger import Logger, create_logger
+from ..logger import Logger, create_logger
 
 
 class OpenAIError(Exception):

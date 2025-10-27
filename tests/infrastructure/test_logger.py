@@ -1,5 +1,4 @@
 import logging
-import pytest
 
 from src.infrastructure.logger import create_logger, StdLogger
 

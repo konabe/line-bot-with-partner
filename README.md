@@ -64,9 +64,12 @@ src/
 │   ├── models/              # ドメインモデル
 │   └── services/            # ドメインサービス
 ├── infrastructure/           # インフラ層
-│   ├── line_adapter.py      # LINE API アダプタ
-│   ├── openai_adapter.py    # OpenAI API クライアント
-│   └── weather_adapter.py   # 天気情報アダプタ
+│   ├── adapters/            # 各種アダプタ実装（移動済み）
+│   │   ├── line_adapter.py
+│   │   ├── openai_adapter.py
+│   │   └── weather_adapter.py
+│   ├── line_model/          # LINE 用テンプレート等
+│   └── logger.py            # ロガー実装
 └── ports/                    # ポート定義
 ```
 
@@ -81,6 +84,12 @@ PYTHONPATH=. pytest -v
 ```
 
 PEP 420 の名前空間パッケージを使用しているため、`PYTHONPATH=.` の設定が必要です。
+
+## アダプタ移動について（注記）
+
+アダプタ実装は `src/infrastructure/adapters/` に移動しました。リポジトリ内の呼び出し元は新しいパスへ更新済みで、
+トップレベルにあった互換性用の shim は削除されています。今後は新しいパスで直接インポートしてください。
+
 
 ### コーディングルール
 

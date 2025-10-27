@@ -16,7 +16,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
 
     # デフォルトの DomainServices をここで生成（遅延で OpenAIAdapter を生成）
     from ..domain import OpenAIAdapter
-    from ..infrastructure.weather_adapter import WeatherAdapter
+    from ..infrastructure.adapters.weather_adapter import WeatherAdapter
     from types import SimpleNamespace
 
     _openai_holder = {"client": None}
@@ -41,7 +41,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
 
     # Instantiate PostbackHandler with injected logger and safe_reply_message
     # profile_getter is implemented in the infrastructure layer
-    from ..infrastructure.line_adapter import LineMessagingAdapter
+    from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
 
     # Create a lightweight adapter instance for profile lookups and pass its
     # bound method to the PostbackHandler. This mirrors the previous behavior

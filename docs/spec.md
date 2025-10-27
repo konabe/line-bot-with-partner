@@ -27,9 +27,9 @@
   - `src/application/message_handlers.py`: テキストメッセージのコマンド判定と処理
   - `src/application/handler_registration.py`: ハンドラの DI 構成
   - `src/application/startup_notify.py`: 起動通知ヘルパ
-  - `src/infrastructure/line_adapter.py`: LINE Messaging API アダプタ
+  - `src/infrastructure/adapters/line_adapter.py`: LINE Messaging API アダプタ
   - `src/infrastructure/line_model/zukan_flex.py`: ポケモン図鑑の Flex バブル生成
-  - `src/infrastructure/openai_adapter.py`: OpenAI クライアント（`OpenAIAdapter`）
+  - `src/infrastructure/adapters/openai_adapter.py`: OpenAI クライアント（`OpenAIAdapter`）
   - `src/infrastructure/logger.py`: DI 可能なロガー
 
 ## 外部サービス・依存
@@ -44,7 +44,7 @@
 - PokeAPI（`_get_random_pokemon_zukan_info`）
   - ランダムなポケモン情報取得
 - 天気情報
-  - `infrastructure/weather_adapter.py`（実装に依存）
+  - `infrastructure/adapters/weather_adapter.py`（実装に依存）
 
 ## エンドポイント
 - `GET /health`

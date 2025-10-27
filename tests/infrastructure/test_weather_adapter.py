@@ -1,7 +1,6 @@
 import requests
-import os
 
-from src.infrastructure.weather_adapter import WeatherAdapter
+from src.infrastructure.adapters.weather_adapter import WeatherAdapter
 
 
 class FakeResponse:
