@@ -41,10 +41,15 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
 
     # Instantiate PostbackHandler with injected logger and safe_reply_message
     # profile_getter is implemented in the infrastructure layer
-    from ..infrastructure.line_adapter import get_display_name_from_line_profile
+    from ..infrastructure.line_adapter import LineMessagingAdapter
+
+    # Create a lightweight adapter instance for profile lookups and pass its
+    # bound method to the PostbackHandler. This mirrors the previous behavior
+    # where the module-level helper constructed an adapter per-call.
+    _profile_adapter = LineMessagingAdapter(logger=create_logger(__name__))
 
     _postback_handler_instance = PostbackHandler(
-        create_logger(__name__), safe_reply_message, get_display_name_from_line_profile
+        create_logger(__name__), safe_reply_message, _profile_adapter.get_display_name_from_line_profile
     )
 
     def postback_handler(event):
