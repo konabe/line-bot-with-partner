@@ -69,21 +69,6 @@ class MessagingInfrastructure:
             return False
 
 
-# シングルトンインスタンス
-_messaging_infrastructure = MessagingInfrastructure()
-
-
-def register_adapter(adapter: MessagingPort):
-    _messaging_infrastructure.register_adapter(adapter)
-
-
-def init_messaging_api(access_token: str):
-    _messaging_infrastructure.init_messaging_api(access_token)
-
-
-def safe_reply_message(reply_message_request, fallback_to: Optional[str] = None) -> bool:
-    return _messaging_infrastructure.safe_reply_message(reply_message_request, fallback_to)
-
-
-def safe_push_message(push_message_request):
-    return _messaging_infrastructure.safe_push_message(push_message_request)
+# Note: No module-level singleton or wrapper functions are provided here.
+# Callers should instantiate `MessagingInfrastructure()` and call its methods
+# directly (e.g. `mi = MessagingInfrastructure(); mi.init_messaging_api(token)`).
