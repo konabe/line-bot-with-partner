@@ -29,15 +29,22 @@ class MessagingInfrastructure:
             except Exception as e:
                 _logger.error(f"Failed to import/register LineMessagingAdapter: {e}")
                 return
+        # At this point we expect an adapter to be registered. Assign to a local
+        # variable and check to satisfy static analyzers that adapter is not None.
+        adapter = self._adapter
+        if adapter is None:
+            _logger.error("No messaging adapter available after registration attempt; aborting init")
+            return
+
         try:
             if not access_token:
                 _logger.warning("init_messaging_api called with empty access_token; adapter init may fail")
-            self._adapter.init(access_token)
-            _logger.debug("_adapter.init called")
+            adapter.init(access_token)
+            _logger.debug("adapter.init called")
         except Exception as e:
             _logger.error(f"Exception while initializing messaging adapter: {e}")
 
-    def safe_reply_message(self, reply_message_request, fallback_to: str = None) -> bool:
+    def safe_reply_message(self, reply_message_request, fallback_to: Optional[str] = None) -> bool:
         """Attempt to reply using the messaging adapter. Returns True on success.
 
         If reply fails with an invalid/expired reply token, and fallback_to is provided,
@@ -78,7 +85,7 @@ def init_messaging_api(access_token: str):
     _messaging_infrastructure.init_messaging_api(access_token)
 
 
-def safe_reply_message(reply_message_request, fallback_to: str = None) -> bool:
+def safe_reply_message(reply_message_request, fallback_to: Optional[str] = None) -> bool:
     return _messaging_infrastructure.safe_reply_message(reply_message_request, fallback_to)
 
 

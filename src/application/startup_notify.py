@@ -10,7 +10,9 @@ from ..infrastructure.logger import Logger
 
 
 def notify_startup_if_configured(
-    safe_push_message: Callable[[PushMessageRequest], None],
+    # The safe_push_message callable may be an older function that returns None
+    # or a newer implementation that returns a bool indicating success.
+    safe_push_message: Callable[[PushMessageRequest], Optional[bool]],
     logger: Optional[Logger] = None,
 ) -> bool:
     """ADMIN_USER_ID が設定されている場合、管理者に起動通知を送信します。
@@ -24,9 +26,12 @@ def notify_startup_if_configured(
         return False
 
     message = os.environ.get("ADMIN_STARTUP_MESSAGE", "サーバーが起動しました。")
+    # Provide optional parameters to satisfy typed model constructors.
     push_message_request = PushMessageRequest(
         to=admin_id,
-        messages=[TextMessage(text=message)],
+        messages=[TextMessage(text=message, quickReply=None, quoteToken=None)],
+        notificationDisabled=False,
+        customAggregationUnits=None,
     )
 
     # safe_push_message now returns a bool; check the result to log correctly.
