@@ -1,15 +1,15 @@
 # LINE Bot with Partner 仕様書
 
-最終更新: 2025-10-26
+最終更新: 2025-10-27
 
 ## 概要
 - 本アプリケーションは LINE Messaging API を利用したチャットボットです。
 - コマンド検出により、以下の機能を提供します。
-  - 「じゃんけん」テンプレート送信
   - 「天気」クエリ解析（例: 「東京の天気」）
+  - 「じゃんけん」テンプレート送信
   - 「今日のご飯」ChatGPT からの提案
-  - 「ポケモン」ランダム図鑑（Flex Message）
-  - その他テキストは ChatGPT による応答
+  - 「ポケモン」ランダム図鑑（TemplateMessage）
+  - 「ぐんまちゃん、」で始まるテキストは ChatGPT による応答
 - 起動時に管理者へ通知（任意）。
 - Gunicorn を前提に運用します。
 
@@ -36,9 +36,11 @@
 - LINE Messaging API v3
   - Webhook 署名検証
   - Reply/Push メッセージ送信
-  - Flex Message（type:flex, altText 必須, contents=bubble など）
-- OpenAI API（Chat Completions）
-  - yes/no 回答、ウミガメ出題生成、通常応答、食事提案
+  - TemplateMessage（ButtonsTemplate など）
+- OpenAI Chat Completions API
+  - エンドポイント: `https://api.openai.com/v1/chat/completions`
+  - 通常応答、食事提案
+  - リクエストパラメータ: `messages`, `max_completion_tokens`
 - PokeAPI（`_get_random_pokemon_zukan_info`）
   - ランダムなポケモン情報取得
 - 天気情報
@@ -54,9 +56,6 @@
 
 ## メッセージ処理（コマンドと挙動）
 `src/application/message_handlers.py` の `MessageHandler.handle_message` が判定。
-  - 「じゃんけん」テンプレート送信
-- 「直接送信テスト」
-  - ユーザーへ push を試み、結果を返信（注: 実装上 `safe_reply_message` 使用）。
 - 天気: テキストに「天気」を含む
   - 「◯◯の天気」から地名抽出。なければ東京で応答。
 - じゃんけん: 完全一致「じゃんけん」
@@ -64,8 +63,8 @@
 - 今日のご飯: 完全一致「今日のご飯」
   - ChatGPT の提案を返信（失敗時は案内メッセージ）。
 - ポケモン: 完全一致「ポケモン」
-  - ランダムなポケモンの図鑑を Flex で返信。
-- それ以外
+  - ランダムなポケモンの図鑑を TemplateMessage で返信。
+- ぐんまちゃん: 「ぐんまちゃん、」で始まるテキスト
   - ChatGPT による通常応答。
 
 ## 起動通知
@@ -80,7 +79,7 @@
   - `LINE_CHANNEL_ACCESS_TOKEN`: Messaging API 呼び出しに使用。
 - OpenAI
   - `OPENAI_API_KEY`: 必須。
-  - `OPENAI_MODEL`: 省略可（デフォルト `gpt-3.5-turbo`）。
+  - `OPENAI_MODEL`: 省略可（デフォルト `gpt-5-mini`）。
 - 起動通知
   - `ADMIN_USER_ID`: 起動通知の送信先。未設定時はスキップ。
   - `ADMIN_STARTUP_MESSAGE`: 通知文（省略可）。
@@ -117,9 +116,10 @@ PYTHONPATH=. pytest
 - OpenAI API キーはログに出力しない。エラーメッセージは一般化。
 
 ## 既知の制約・メモ
-- 「直接送信テスト」ハンドラは `safe_reply_message` を用いて push リクエストを送っており、実運用では `safe_push_message` へ切替が望ましい。
 - PokeAPI 取得は簡易実装。ネットワーク障害時は英名や不完全情報となる可能性。
 - Gunicorn ワーカー数が複数の場合でも、/tmp フラグで起動通知は 1 回に抑制される設計。
+- OpenAI API のタイムアウトは 30 秒に設定。
+- OpenAI API のレスポンス処理は Chat Completions API の標準形式（`choices[0].message.content`）のみ対応。
 
 ## 参照
 - LINE Messaging API: https://developers.line.biz/ja/reference/messaging-api/
