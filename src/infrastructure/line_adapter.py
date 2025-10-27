@@ -133,14 +133,4 @@ class LineMessagingAdapter(MessagingPort):
         return None
 
 
-def get_display_name_from_line_profile(user_id: str) -> Optional[str]:
-    """Backward-compatible module helper that delegates to a LineMessagingAdapter instance.
-
-    Keeping this wrapper preserves external imports that expect a function.
-    """
-    # Use a lightweight adapter instance with the module logger to perform the fetch.
-    adapter = LineMessagingAdapter(logger=logger)
-    return adapter.get_display_name_from_line_profile(user_id)
-
-
-__all__ = ["LineMessagingAdapter", "get_display_name_from_line_profile"]
+__all__ = ["LineMessagingAdapter"]
