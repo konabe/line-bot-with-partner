@@ -65,7 +65,7 @@ src/
 │   └── services/            # ドメインサービス
 ├── infrastructure/           # インフラ層
 │   ├── line_adapter.py      # LINE API アダプタ
-│   ├── openai_helpers.py    # OpenAI API クライアント
+│   ├── openai_adapter.py    # OpenAI API クライアント
 │   └── weather_adapter.py   # 天気情報アダプタ
 └── ports/                    # ポート定義
 ```

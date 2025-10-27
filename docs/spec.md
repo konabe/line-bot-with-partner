@@ -29,7 +29,7 @@
   - `src/application/startup_notify.py`: 起動通知ヘルパ
   - `src/infrastructure/line_adapter.py`: LINE Messaging API アダプタ
   - `src/infrastructure/line_model/zukan_flex.py`: ポケモン図鑑の Flex バブル生成
-  - `src/infrastructure/openai_helpers.py`: OpenAI クライアント（`OpenAIClient`）
+  - `src/infrastructure/openai_adapter.py`: OpenAI クライアント（`OpenAIAdapter`）
   - `src/infrastructure/logger.py`: DI 可能なロガー
 
 ## 外部サービス・依存
