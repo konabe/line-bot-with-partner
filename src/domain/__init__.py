@@ -8,8 +8,8 @@ loaded as a top-level package (for example when running the app as a module
 or under different working directories).
 """
 
-from src.infrastructure.openai_helpers import OpenAIClient
+from src.infrastructure.openai_helpers import OpenAIAdapter
 
 __all__ = [
-    'OpenAIClient',
+    'OpenAIAdapter',
 ]

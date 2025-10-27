@@ -16,8 +16,8 @@ class OpenAIError(Exception):
     """
 
 
-class OpenAIClient:
-    """OpenAI APIとの通信を担当するクライアントクラス"""
+class OpenAIAdapter:
+    """OpenAI APIとの通信を担当するアダプタクラス"""
 
     # 定数定義
     OPENAI_API_KEY_ERROR = 'OPENAI_API_KEY is not set'
@@ -36,8 +36,8 @@ class OpenAIClient:
         self.api_key = os.environ.get('OPENAI_API_KEY')
         if not self.api_key:
             # 明示的な例外型で統一する
-            raise OpenAIError(OpenAIClient.OPENAI_API_KEY_ERROR)
-        self.model = os.environ.get('OPENAI_MODEL', OpenAIClient.DEFAULT_MODEL)
+            raise OpenAIError(OpenAIAdapter.OPENAI_API_KEY_ERROR)
+        self.model = os.environ.get('OPENAI_MODEL', OpenAIAdapter.DEFAULT_MODEL)
 
     def get_chatgpt_meal_suggestion(self):
         """料理のおすすめをChatGPTから取得"""
@@ -65,7 +65,7 @@ class OpenAIClient:
                 # payload が JSON 化できない場合は無視
                 pass
 
-            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=30)
+            resp = requests.post(OpenAIAdapter.OPENAI_API_URL, json=payload, headers=headers, timeout=30)
             # 詳細なエラーボディをログに残す（400系含む）
             if resp.status_code >= 400:
                 # レスポンス本文をログに残すが、過度に長い場合は切り詰める
@@ -76,15 +76,15 @@ class OpenAIClient:
                 raise OpenAIError(f"OpenAI error {resp.status_code}: {body}")
 
             data = resp.json()
-            
+
             choices = data.get('choices', [])
             if not choices:
-                raise OpenAIError(OpenAIClient.NO_CHOICES_ERROR)
-            
+                raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
+
             message = choices[0].get('message', {})
             content = message.get('content', '')
             if not content:
-                raise OpenAIError(OpenAIClient.NO_CHOICES_ERROR)
+                raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
             return content
         except Exception as e:
             # ここでは OpenAI に起因する任意の例外を OpenAIError にラップして投げる
@@ -116,7 +116,7 @@ class OpenAIClient:
             except Exception:
                 pass
 
-            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=30)
+            resp = requests.post(OpenAIAdapter.OPENAI_API_URL, json=payload, headers=headers, timeout=30)
             if resp.status_code >= 400:
                 body = resp.text or ''
                 if len(body) > 2000:
@@ -128,12 +128,12 @@ class OpenAIClient:
 
             choices = data.get('choices', [])
             if not choices:
-                raise OpenAIError(OpenAIClient.NO_CHOICES_ERROR)
+                raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
             
             message = choices[0].get('message', {})
             content = message.get('content', '')
             if not content:
-                raise OpenAIError(OpenAIClient.NO_CHOICES_ERROR)
+                raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
             return content.strip()
         except Exception as e:
             self.logger.error(f"OpenAI API error: {e}")

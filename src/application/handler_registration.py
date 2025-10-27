@@ -14,8 +14,8 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
     # ルートを登録
     register_routes(app, handler, safe_reply_message)
 
-    # デフォルトの DomainServices をここで生成（遅延で OpenAIClient を生成）
-    from ..domain import OpenAIClient
+    # デフォルトの DomainServices をここで生成（遅延で OpenAIAdapter を生成）
+    from ..domain import OpenAIAdapter
     from ..infrastructure.weather_adapter import WeatherAdapter
     from types import SimpleNamespace
 
@@ -24,7 +24,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
 
     def _get_openai_client():
         if _openai_holder["client"] is None:
-            _openai_holder["client"] = OpenAIClient()
+            _openai_holder["client"] = OpenAIAdapter()
         return _openai_holder["client"]
 
     default_domain_services = SimpleNamespace(
