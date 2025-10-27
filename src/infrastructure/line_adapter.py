@@ -102,37 +102,45 @@ class LineMessagingAdapter(MessagingPort):
             self.logger.error(f"Error when calling messaging_api.push_message: {e}")
             raise
 
+    def get_display_name_from_line_profile(self, user_id: str) -> Optional[str]:
+        """Instance method: fetch displayName for a LINE user via the Messaging API.
+
+        This is the same logic as the previous module-level helper but uses
+        the adapter's injected logger (self.logger).
+        """
+        try:
+            import requests
+        except Exception:
+            self.logger.debug("requests not available; skipping profile fetch")
+            return None
+
+        token = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
+        if not token or not user_id:
+            self.logger.debug("LINE_CHANNEL_ACCESS_TOKEN not set or empty; skipping profile fetch")
+            return None
+
+        try:
+            resp = requests.get(
+                f"https://api.line.me/v2/bot/profile/{user_id}",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=2,
+            )
+            if resp.status_code == 200:
+                return resp.json().get('displayName')
+            self.logger.debug(f"profile fetch returned status {resp.status_code} for {user_id}")
+        except Exception as e:
+            self.logger.error(f"Failed to fetch profile for {user_id}: {e}")
+        return None
+
 
 def get_display_name_from_line_profile(user_id: str) -> Optional[str]:
-    """Fetch displayName for a LINE user via the Messaging API.
+    """Backward-compatible module helper that delegates to a LineMessagingAdapter instance.
 
-    Returns displayName or None on failure. This function is resilient: if
-    `requests` is not installed or `LINE_CHANNEL_ACCESS_TOKEN` is not set,
-    it will return None.
+    Keeping this wrapper preserves external imports that expect a function.
     """
-    try:
-        import requests
-    except Exception:
-        logger.debug("requests not available; skipping profile fetch")
-        return None
-
-    token = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
-    if not token or not user_id:
-        logger.debug("LINE_CHANNEL_ACCESS_TOKEN not set or empty; skipping profile fetch")
-        return None
-
-    try:
-        resp = requests.get(
-            f"https://api.line.me/v2/bot/profile/{user_id}",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=2,
-        )
-        if resp.status_code == 200:
-            return resp.json().get('displayName')
-        logger.debug(f"profile fetch returned status {resp.status_code} for {user_id}")
-    except Exception as e:
-        logger.error(f"Failed to fetch profile for {user_id}: {e}")
-    return None
+    # Use a lightweight adapter instance with the module logger to perform the fetch.
+    adapter = LineMessagingAdapter(logger=logger)
+    return adapter.get_display_name_from_line_profile(user_id)
 
 
 __all__ = ["LineMessagingAdapter", "get_display_name_from_line_profile"]
