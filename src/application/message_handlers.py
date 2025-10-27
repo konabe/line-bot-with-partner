@@ -4,7 +4,7 @@ from typing import Protocol, Callable
 from .usecases.send_weather_usecase import SendWeatherUsecase
 from .usecases.send_meal_usecase import SendMealUsecase
 from .usecases.send_chat_response_usecase import SendChatResponseUsecase
-from ..infrastructure.line_model.zukan_flex import create_pokemon_zukan_button_template
+from ..infrastructure.line_model.zukan_button_template import create_pokemon_zukan_button_template
 from linebot.v3.messaging import models
 
 logger = logging.getLogger(__name__)
