@@ -31,7 +31,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          # Install runtime deps
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # Install dev/test deps if present
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          # Ensure pytest is available as a fallback
+          pip install pytest
 
       - name: Run tests
         env:
