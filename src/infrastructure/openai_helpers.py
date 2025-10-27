@@ -21,7 +21,7 @@ class OpenAIClient:
 
     # 定数定義
     OPENAI_API_KEY_ERROR = 'OPENAI_API_KEY is not set'
-    DEFAULT_MODEL = 'gpt-5'
+    DEFAULT_MODEL = 'gpt-5-mini'
     CONTENT_TYPE_JSON = 'application/json'
     OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions'
     NO_CHOICES_ERROR = 'no choices from OpenAI'
@@ -65,7 +65,7 @@ class OpenAIClient:
                 # payload が JSON 化できない場合は無視
                 pass
 
-            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
+            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=30)
             # 詳細なエラーボディをログに残す（400系含む）
             if resp.status_code >= 400:
                 # レスポンス本文をログに残すが、過度に長い場合は切り詰める
@@ -116,7 +116,7 @@ class OpenAIClient:
             except Exception:
                 pass
 
-            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=10)
+            resp = requests.post(OpenAIClient.OPENAI_API_URL, json=payload, headers=headers, timeout=30)
             if resp.status_code >= 400:
                 body = resp.text or ''
                 if len(body) > 2000:
