@@ -1,9 +1,8 @@
-from ...ports.messaging import MessagingPort
 from ..logger import create_logger, Logger
 from typing import Optional
 import os
 
-class LineMessagingAdapter(MessagingPort):
+class LineMessagingAdapter:
     def __init__(self, logger: Optional[Logger] = None):
         # logger can be injected for testing / customization. If not provided,
         # create a StdLogger with this module's name.
