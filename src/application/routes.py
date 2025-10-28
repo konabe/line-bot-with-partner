@@ -9,14 +9,14 @@ logger = logging.getLogger(__name__)
 
 
 def register_routes(app, handler: WebhookHandler, safe_reply_message):
-    @app.route('/health', methods=['GET'])
+    @app.route("/health", methods=["GET"])
     def health():
         logger.debug("/health endpoint called")
-        return 'ok', 200
+        return "ok", 200
 
-    @app.route('/callback', methods=['POST'])
+    @app.route("/callback", methods=["POST"])
     def callback():
-        signature = request.headers.get('X-Line-Signature', '')
+        signature = request.headers.get("X-Line-Signature", "")
         body = request.get_data(as_text=True)
         logger.debug(f"/callback called. Signature: {signature}, Body: {body}")
         try:
@@ -30,19 +30,26 @@ def register_routes(app, handler: WebhookHandler, safe_reply_message):
             logger.error(f"Exception in handler.handle: {e}")
             _handle_general_error(body, safe_reply_message)
             abort(500)
-        return 'OK', 200
+        return "OK", 200
 
 
 def _handle_signature_error(body, safe_reply_message):
     """InvalidSignatureError を処理し、ユーザーにエラーメッセージを送信します。"""
     try:
         data = json.loads(body)
-        for ev in data.get('events', []):
-            reply_token = ev.get('replyToken')
+        for ev in data.get("events", []):
+            reply_token = ev.get("replyToken")
             if reply_token:
                 reply_message_request = ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[TextMessage(text='署名検証に失敗しました。管理者に連絡してください。')]
+                    replyToken=reply_token,
+                    messages=[
+                        TextMessage(
+                            text="署名検証に失敗しました。管理者に連絡してください。",
+                            quickReply=None,
+                            quoteToken=None,
+                        )
+                    ],
+                    notificationDisabled=False,
                 )
                 safe_reply_message(reply_message_request)
     except Exception as ex:
@@ -53,12 +60,19 @@ def _handle_general_error(body, safe_reply_message):
     """一般的な例外を処理し、ユーザーにエラーメッセージを送信します。"""
     try:
         data = json.loads(body)
-        for ev in data.get('events', []):
-            reply_token = ev.get('replyToken')
+        for ev in data.get("events", []):
+            reply_token = ev.get("replyToken")
             if reply_token:
                 reply_message_request = ReplyMessageRequest(
-                    reply_token=reply_token,
-                    messages=[TextMessage(text='現在障害が発生しています。管理者に連絡してください。')]
+                    replyToken=reply_token,
+                    messages=[
+                        TextMessage(
+                            text="現在障害が発生しています。管理者に連絡してください。",
+                            quickReply=None,
+                            quoteToken=None,
+                        )
+                    ],
+                    notificationDisabled=False,
                 )
                 safe_reply_message(reply_message_request)
     except Exception as ex:

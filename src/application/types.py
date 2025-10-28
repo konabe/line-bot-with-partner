@@ -10,6 +10,8 @@ class _Source(Protocol):
 
 
 """LINE のポストバックイベントの型を表すプロトコルクラス"""
+
+
 class PostbackEventLike(Protocol):
     postback: _Postback
     reply_token: str

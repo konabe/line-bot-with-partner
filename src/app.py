@@ -12,8 +12,8 @@ load_dotenv()
 app = Flask(__name__)
 logger = create_logger(__name__)
 
-CHANNEL_SECRET = os.environ.get('LINE_CHANNEL_SECRET', '')
-CHANNEL_ACCESS_TOKEN = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
+CHANNEL_SECRET = os.environ.get("LINE_CHANNEL_SECRET", "")
+CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 
 # Gunicorn 前提。ここで必要な初期化のみ行う。
 
@@ -29,20 +29,20 @@ logger.info("App initialized (module imported)")
 
 
 def _notify_once_on_import() -> None:
-	"""インポート時に一度だけ起動通知を送る。
+    """インポート時に一度だけ起動通知を送る。
 
-	コンテナ内で一度だけ実行されるよう、固定フラグファイルで多重送信を防止。
-	"""
-	flag_path = "/tmp/line-bot-startup-notified"
-	try:
-		with open(flag_path, "x"):
-			pass
-	except FileExistsError:
-		return
-	try:
-		notify_startup_if_configured(_line_adapter.push_message, logger)
-	except Exception as e:
-		logger.error(f"startup notify failed: {e}")
+    コンテナ内で一度だけ実行されるよう、固定フラグファイルで多重送信を防止。
+    """
+    flag_path = "/tmp/line-bot-startup-notified"
+    try:
+        with open(flag_path, "x"):
+            pass
+    except FileExistsError:
+        return
+    try:
+        notify_startup_if_configured(_line_adapter.push_message, logger)
+    except Exception as e:
+        logger.error(f"startup notify failed: {e}")
 
 
 _notify_once_on_import()

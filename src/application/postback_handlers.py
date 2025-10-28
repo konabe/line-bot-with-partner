@@ -1,7 +1,6 @@
-from ..infrastructure.logger import Logger, create_logger
+from ..infrastructure.logger import Logger
 from typing import Callable, Optional
-from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-from ..domain.models.janken import JankenGame
+from linebot.v3.messaging.models import ReplyMessageRequest
 from ..domain.services.janken_game_master_service import JankenGameMasterService
 from .usecases.start_janken_game_usecase import StartJankenGameUsecase
 from .types import PostbackEventLike
@@ -19,7 +18,9 @@ class PostbackHandler:
         self._safe_reply: Callable[[ReplyMessageRequest], None] = safe_reply_message
         self._profile_getter: Callable[[str], Optional[str]] = profile_getter
         # ドメインサービスは注入可能にしてテスト容易性を確保
-        self._janken_service: JankenGameMasterService = janken_service or JankenGameMasterService()
+        self._janken_service: JankenGameMasterService = (
+            janken_service or JankenGameMasterService()
+        )
 
     def handle_postback(self, event: PostbackEventLike) -> None:
         """LINE からのポストバックイベントを処理します。"""

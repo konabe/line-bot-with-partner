@@ -1,8 +1,9 @@
 """Mock messaging adapter for tests.
 
-This adapter records replies and pushes in memory so unit tests can assert on 
+This adapter records replies and pushes in memory so unit tests can assert on
 them without calling external APIs.
 """
+
 from typing import Any, List
 
 

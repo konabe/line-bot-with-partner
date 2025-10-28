@@ -2,6 +2,7 @@ from ..logger import create_logger, Logger
 from typing import Optional
 import os
 
+
 class LineMessagingAdapter:
     def __init__(self, logger: Optional[Logger] = None):
         # logger can be injected for testing / customization. If not provided,
@@ -14,6 +15,7 @@ class LineMessagingAdapter:
             from linebot.v3.messaging.configuration import Configuration
             from linebot.v3.messaging.api_client import ApiClient
             from linebot.v3.messaging import MessagingApi
+
             _config = Configuration(access_token=access_token)
             _api_client = ApiClient(configuration=_config)
             self.messaging_api = MessagingApi(_api_client)
@@ -23,7 +25,9 @@ class LineMessagingAdapter:
 
     def reply_message(self, reply_message_request):
         if self.messaging_api is None:
-            self.logger.warning("messaging_api is not initialized; skipping reply_message")
+            self.logger.warning(
+                "messaging_api is not initialized; skipping reply_message"
+            )
             return
         try:
             # We assume reply_message is called with SDK model instances
@@ -35,7 +39,9 @@ class LineMessagingAdapter:
                     payload_for_log = reply_message_request.to_dict()
                 except Exception:
                     try:
-                        payload_for_log = reply_message_request.dict(by_alias=True, exclude_none=True)
+                        payload_for_log = reply_message_request.dict(
+                            by_alias=True, exclude_none=True
+                        )
                     except Exception:
                         payload_for_log = None
                 try:
@@ -51,7 +57,10 @@ class LineMessagingAdapter:
                 # a ReplyMessageRequest via parse_obj and send that.
                 try:
                     from linebot.v3.messaging import models
-                    sdk_req = models.ReplyMessageRequest.parse_obj(reply_message_request)
+
+                    sdk_req = models.ReplyMessageRequest.parse_obj(
+                        reply_message_request
+                    )
                     self.messaging_api.reply_message(sdk_req)
                     return
                 except Exception:
@@ -64,7 +73,9 @@ class LineMessagingAdapter:
 
     def push_message(self, push_message_request):
         if self.messaging_api is None:
-            self.logger.warning("messaging_api is not initialized; skipping push_message")
+            self.logger.warning(
+                "messaging_api is not initialized; skipping push_message"
+            )
             return
         try:
             # Assume push_message is called with SDK model instances (PushMessageRequest
@@ -76,7 +87,9 @@ class LineMessagingAdapter:
                     self.logger.debug(f"push payload: {push_message_request.to_dict()}")
                 except Exception:
                     try:
-                        self.logger.debug(f"push payload: {push_message_request.dict(by_alias=True, exclude_none=True)}")
+                        self.logger.debug(
+                            f"push payload: {push_message_request.dict(by_alias=True, exclude_none=True)}"
+                        )
                     except Exception:
                         self.logger.debug("push payload: <unable to serialize>")
 
@@ -86,6 +99,7 @@ class LineMessagingAdapter:
                 # Fallback: try to build a PushMessageRequest from the object
                 try:
                     from linebot.v3.messaging import models
+
                     sdk_req = models.PushMessageRequest.parse_obj(push_message_request)
                     self.messaging_api.push_message(sdk_req)
                     return
@@ -108,9 +122,11 @@ class LineMessagingAdapter:
             self.logger.debug("requests not available; skipping profile fetch")
             return None
 
-        token = os.environ.get('LINE_CHANNEL_ACCESS_TOKEN', '')
+        token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
         if not token or not user_id:
-            self.logger.debug("LINE_CHANNEL_ACCESS_TOKEN not set or empty; skipping profile fetch")
+            self.logger.debug(
+                "LINE_CHANNEL_ACCESS_TOKEN not set or empty; skipping profile fetch"
+            )
             return None
 
         try:
@@ -120,8 +136,10 @@ class LineMessagingAdapter:
                 timeout=2,
             )
             if resp.status_code == 200:
-                return resp.json().get('displayName')
-            self.logger.debug(f"profile fetch returned status {resp.status_code} for {user_id}")
+                return resp.json().get("displayName")
+            self.logger.debug(
+                f"profile fetch returned status {resp.status_code} for {user_id}"
+            )
         except Exception as e:
             self.logger.error(f"Failed to fetch profile for {user_id}: {e}")
         return None

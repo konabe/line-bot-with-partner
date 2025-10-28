@@ -12,9 +12,26 @@ Flask + line-bot-sdk を使った LINE Bot アプリケーションです。
 
 ## セットアップ
 
+### 🚀 クイックスタート（新規メンバー向け）
+
+開発環境の自動セットアップを実行：
+```bash
+# 自動セットアップスクリプト（推奨）
+./scripts/setup-dev-env.sh
+
+# または Make を使用
+make setup
+```
+
+### 手動セットアップ
+
 1. 依存パッケージのインストール:
 ```bash
+# 本番依存関係
 pip install -r requirements.txt
+
+# 開発依存関係（テスト、リント等）
+pip install -r requirements-dev.txt
 ```
 
 2. 環境変数の設定（`.env.example` を参考に `.env` を作成）:
@@ -47,6 +64,55 @@ gunicorn src.app:app --bind 0.0.0.0:8080
 Webhook を動かすには public URL が必要です（ngrok 等を使用）。
 
 ## 開発者向け情報
+
+### 🛠️ 開発環境
+
+#### VS Code 設定
+本プロジェクトには以下の VS Code 設定が含まれています：
+
+- **Python 環境**: 自動検出とPYTHONPATH設定
+- **テスト**: pytest 統合とテストディスカバリ
+- **リント**: 基本的な型チェック（Pylance）
+- **推奨拡張**: Python、Copilot等の開発支援ツール
+
+#### 使用可能なコマンド
+```bash
+# テスト実行
+make test                # 簡潔な出力
+make test-verbose       # 詳細な出力
+PYTHONPATH=. pytest -q # 直接実行
+
+# コード品質
+make format             # コードフォーマット (Black)
+make lint              # 静的解析 (flake8)
+
+# 環境管理
+make clean             # キャッシュファイル削除
+make install-deps      # 依存関係再インストール
+
+# アプリ起動
+make run               # 開発サーバー起動
+./start.sh            # 本番サーバー起動
+```
+
+#### トラブルシューティング
+
+**pytest インポートエラーが発生する場合：**
+```bash
+# Python 環境に pytest がインストールされているか確認
+python -c "import pytest; print(pytest.__version__)"
+
+# インストールされていない場合
+pip install pytest
+
+# または開発依存関係を再インストール
+pip install -r requirements-dev.txt
+```
+
+**VS Code で型チェックエラーが表示される場合：**
+1. VS Code で `Ctrl+Shift+P` → "Python: Select Interpreter"
+2. 適切な Python 環境を選択
+3. `F1` → "Developer: Reload Window" で設定リロード
 
 ### プロジェクト構成
 

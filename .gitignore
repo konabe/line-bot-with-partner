@@ -33,10 +33,20 @@ Thumbs.db
 # pip
 pip-wheel-metadata/
 
+# pytest
+.pytest_cache/
+.tox/
+.nox/
+
 # その他
 *.bak
 *.swp
 *.swo
+*~
+.cache/
+build/
+dist/
+*.egg-info/
 
 # node
 node_modules/

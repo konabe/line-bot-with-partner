@@ -7,10 +7,10 @@ from typing import Dict, List
 class Hand:
     """じゃんけんの手を表すクラス"""
 
-    # じゃんけんの手の定義
-    ROCK = None  # 前方参照のため後で設定
-    SCISSORS = None
-    PAPER = None
+    # じゃんけんの手の定義（型アノテーションを明示的に追加）
+    ROCK: "Hand"
+    SCISSORS: "Hand"
+    PAPER: "Hand"
 
     def __init__(self, emoji: str, name: str):
         self.emoji = emoji
@@ -29,12 +29,12 @@ class Hand:
         return hash(self.emoji)
 
     @classmethod
-    def get_all_hands(cls) -> List['Hand']:
+    def get_all_hands(cls) -> List["Hand"]:
         """全ての手を取得"""
         return [cls.ROCK, cls.SCISSORS, cls.PAPER]
 
     @classmethod
-    def from_emoji(cls, emoji: str) -> 'Hand':
+    def from_emoji(cls, emoji: str) -> "Hand":
         """絵文字からHandインスタンスを取得"""
         for hand in cls.get_all_hands():
             if hand.emoji == emoji:
@@ -43,9 +43,9 @@ class Hand:
 
 
 # インスタンスの作成（前方参照を避けるため）
-Hand.ROCK = Hand('✊', 'グー')
-Hand.SCISSORS = Hand('✌️', 'チョキ')
-Hand.PAPER = Hand('✋', 'パー')
+Hand.ROCK = Hand("✊", "グー")
+Hand.SCISSORS = Hand("✌️", "チョキ")
+Hand.PAPER = Hand("✋", "パー")
 
 
 class JankenBattle:
@@ -53,9 +53,9 @@ class JankenBattle:
 
     # 勝敗判定: (ユーザー, ボット) の組み合わせ
     WINNING_COMBINATIONS = [
-        (Hand.ROCK, Hand.SCISSORS),     # グーはチョキに勝つ
-        (Hand.SCISSORS, Hand.PAPER),    # チョキはパーに勝つ
-        (Hand.PAPER, Hand.ROCK)         # パーはグーに勝つ
+        (Hand.ROCK, Hand.SCISSORS),  # グーはチョキに勝つ
+        (Hand.SCISSORS, Hand.PAPER),  # チョキはパーに勝つ
+        (Hand.PAPER, Hand.ROCK),  # パーはグーに勝つ
     ]
 
     def __init__(self, user_hand: Hand, bot_hand: Hand):
@@ -65,19 +65,19 @@ class JankenBattle:
     def get_result(self) -> str:
         """勝敗結果を取得"""
         if self.user_hand == self.bot_hand:
-            return 'あいこ'
+            return "あいこ"
 
         if (self.user_hand, self.bot_hand) in self.WINNING_COMBINATIONS:
-            return 'あなたの勝ち！'
+            return "あなたの勝ち！"
         else:
-            return 'あなたの負け…'
+            return "あなたの負け…"
 
     def to_dict(self) -> Dict[str, str]:
         """結果を辞書形式で返す"""
         return {
-            'user_hand': self.user_hand.emoji,
-            'bot_hand': self.bot_hand.emoji,
-            'result': self.get_result()
+            "user_hand": self.user_hand.emoji,
+            "bot_hand": self.bot_hand.emoji,
+            "result": self.get_result(),
         }
 
 
@@ -122,4 +122,4 @@ class JankenGame:
             hand = Hand.from_emoji(hand_emoji)
             return hand.name
         except ValueError:
-            return '不明'
+            return "不明"

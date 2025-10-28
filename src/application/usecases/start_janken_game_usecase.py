@@ -7,8 +7,6 @@ from ...domain.services.janken_game_master_service import JankenGameMasterServic
 from ...infrastructure.logger import create_logger, Logger
 
 
-
-
 class StartJankenGameUsecase:
     """じゃんけん開始（ポストバック受信時）のユースケース
 
@@ -46,17 +44,22 @@ class StartJankenGameUsecase:
 
         # ログにプロフィール取得の結果を残す（None の場合は取得できなかった旨）
         if user_id and not display_name:
-            self._logger.debug(f"profile_getter returned no display name for user_id={user_id}")
+            self._logger.debug(
+                f"profile_getter returned no display name for user_id={user_id}"
+            )
 
         user_label = f"あなた ({display_name})" if display_name else "あなた"
 
         try:
-            reply: str = self._janken_service.play_and_make_reply(user_hand_input, user_label)
+            reply: str = self._janken_service.play_and_make_reply(
+                user_hand_input, user_label
+            )
         except ValueError as e:
             reply = f"{user_label}: {user_hand_input}\nエラー: {e}"
 
         reply_message_request: ReplyMessageRequest = ReplyMessageRequest(
-            reply_token=event.reply_token,
-            messages=[TextMessage(text=reply)]
+            replyToken=event.reply_token,
+            messages=[TextMessage(text=reply, quickReply=None, quoteToken=None)],
+            notificationDisabled=False,
         )
         self._safe_reply(reply_message_request)

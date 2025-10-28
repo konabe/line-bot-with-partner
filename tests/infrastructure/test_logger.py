@@ -4,37 +4,37 @@ from src.infrastructure.logger import create_logger, StdLogger
 
 
 def test_create_logger_returns_stdlogger():
-    logger = create_logger('test.logger')
+    logger = create_logger("test.logger")
     assert isinstance(logger, StdLogger)
 
 
 def test_stdlogger_logs_messages(caplog):
     caplog.set_level(logging.DEBUG)
-    logger = create_logger('test.stdlogger')
+    logger = create_logger("test.stdlogger")
 
-    logger.debug('debug message')
-    logger.info('info message')
-    logger.warning('warning message')
-    logger.error('error message')
+    logger.debug("debug message")
+    logger.info("info message")
+    logger.warning("warning message")
+    logger.error("error message")
 
     texts = [rec.getMessage() for rec in caplog.records]
-    assert 'debug message' in texts
-    assert 'info message' in texts
-    assert 'warning message' in texts
-    assert 'error message' in texts
+    assert "debug message" in texts
+    assert "info message" in texts
+    assert "warning message" in texts
+    assert "error message" in texts
 
 
 def test_stdlogger_exception_logs_traceback(caplog):
     caplog.set_level(logging.ERROR)
-    logger = create_logger('test.stdlogger.exception')
+    logger = create_logger("test.stdlogger.exception")
     try:
-        raise ValueError('boom')
+        raise ValueError("boom")
     except Exception:
-        logger.exception('exception occurred')
+        logger.exception("exception occurred")
 
     # ensure the message was logged and includes our text
-    messages = '\n'.join(f"{r.message}" for r in caplog.records)
-    assert 'exception occurred' in messages
+    messages = "\n".join(f"{r.message}" for r in caplog.records)
+    assert "exception occurred" in messages
 
 
 def test_stdlogger_with_existing_root_handler_emits_info():
@@ -58,14 +58,14 @@ def test_stdlogger_with_existing_root_handler_emits_info():
         root.handlers = [lst]
         root.setLevel(_logging.INFO)
 
-        logger = create_logger('test.stdlogger.root')
-        logger.info('root-info-visible')
-        logger.debug('root-debug-hidden')
+        logger = create_logger("test.stdlogger.root")
+        logger.info("root-info-visible")
+        logger.debug("root-debug-hidden")
 
         msgs = [r.getMessage() for r in lst.records]
-        assert 'root-info-visible' in msgs
+        assert "root-info-visible" in msgs
         # ルートが INFO のため DEBUG は出力されない
-        assert 'root-debug-hidden' not in msgs
+        assert "root-debug-hidden" not in msgs
     finally:
         # 復元
         root.handlers = old_handlers
