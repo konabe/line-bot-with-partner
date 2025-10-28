@@ -1,10 +1,12 @@
 import dataclasses
+import pytest
+from typing import Any, cast
 
 from src.domain.models.pokemon_info import PokemonInfo
 
 
 def test_from_mapping_none_returns_defaults():
-    info = PokemonInfo.from_mapping(None)
+    info = PokemonInfo.from_mapping(cast(Any, None))
     assert info.name == ""
     assert info.types == []
     assert info.image_url is None
@@ -42,11 +44,6 @@ def test_from_mapping_zukan_no_string_and_invalid():
 
 def test_dataclass_is_frozen():
     info = PokemonInfo.from_mapping({"name": "Bulbasaur"})
-    try:
-        info.name = "Ivysaur"
-        raised = False
-    except Exception as e:
-        raised = True
-        # Prefer FrozenInstanceError but accept AttributeError as conservative fallback
-        assert isinstance(e, (dataclasses.FrozenInstanceError, AttributeError))
-    assert raised
+    # assignment should raise FrozenInstanceError (or AttributeError on some runtimes)
+    with pytest.raises((dataclasses.FrozenInstanceError, AttributeError)):
+        info.name = "Ivysaur"  # type: ignore
