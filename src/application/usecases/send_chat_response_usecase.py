@@ -1,6 +1,6 @@
-from typing import Protocol
-
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+
+from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
 
 
 class SendChatResponseUsecase:
@@ -9,14 +9,6 @@ class SendChatResponseUsecase:
     コンストラクタで safe_reply_message と chatgpt_callable を注入する。
     chatgpt_callable は (user_message: str) -> str を返す callable を想定します。
     """
-
-    class LineAdapterProtocol(Protocol):
-        def reply_message(self, req) -> None:
-            ...
-
-    class OpenAIAdapterProtocol(Protocol):
-        def get_chatgpt_response(self, user_message: str) -> str:
-            ...
 
     def __init__(
         self,
