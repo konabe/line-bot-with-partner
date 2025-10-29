@@ -21,14 +21,22 @@ class DomainServices(Protocol):
     get_chatgpt_response: Callable[[str], str]
     # weather_adapter: object that provides get_weather_text(location: str) -> str
     weather_adapter: object
+    # expose openai adapter instance for usecases that need direct access
+    openai_adapter: object
 
 
 class MessageHandler:
     """LINEメッセージイベントを処理するハンドラークラス"""
 
-    def __init__(self, safe_reply_message: Callable, domain_services: DomainServices):
+    def __init__(
+        self,
+        safe_reply_message: Callable,
+        domain_services: DomainServices,
+        line_adapter: object,
+    ):
         self.safe_reply_message = safe_reply_message
         self.domain_services = domain_services
+        self.line_adapter = line_adapter
 
     def handle_message(self, event) -> None:
         """LINE からのテキストメッセージイベントを処理します。"""
@@ -128,8 +136,12 @@ class MessageHandler:
 
     def _handle_chatgpt(self, event, text: str) -> None:
         logger.info("コマンド以外のメッセージを受信: usecase に委譲")
+        # Inject adapter instances into the usecase
+        from typing import Any, cast
+
+        # cast to Any to satisfy the protocol typing in the usecase
         SendChatResponseUsecase(
-            self.safe_reply_message, self.domain_services.get_chatgpt_response
+            cast(Any, self.line_adapter), cast(Any, self.domain_services.openai_adapter)
         ).execute(event, text)
 
     def _get_random_pokemon_zukan_info(self):

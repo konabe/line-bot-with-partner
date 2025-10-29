@@ -35,6 +35,10 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
         def __init__(self):
             self.weather_adapter: object = _weather_adapter
 
+        @property
+        def openai_adapter(self):
+            return _get_openai_client()
+
         def get_chatgpt_meal_suggestion(self) -> str:
             return _get_openai_client().get_chatgpt_meal_suggestion()
 
@@ -43,8 +47,13 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
 
     default_domain_services = DefaultDomainServices()
 
+    from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
+
+    # Create a Line adapter instance to be injected into handlers/usecases
+    _line_adapter = LineMessagingAdapter(logger=create_logger(__name__))
+
     message_handler_instance = MessageHandler(
-        safe_reply_message, default_domain_services
+        safe_reply_message, default_domain_services, _line_adapter
     )
 
     def message_handler(event):
@@ -52,17 +61,11 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
 
     # Instantiate PostbackHandler with injected logger and safe_reply_message
     # profile_getter is implemented in the infrastructure layer
-    from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
-
-    # Create a lightweight adapter instance for profile lookups and pass its
-    # bound method to the PostbackHandler. This mirrors the previous behavior
-    # where the module-level helper constructed an adapter per-call.
-    _profile_adapter = LineMessagingAdapter(logger=create_logger(__name__))
-
+    # Reuse the same LineMessagingAdapter for postback profile lookups
     _postback_handler_instance = PostbackHandler(
         create_logger(__name__),
         safe_reply_message,
-        _profile_adapter.get_display_name_from_line_profile,
+        _line_adapter.get_display_name_from_line_profile,
     )
 
     def postback_handler(event):

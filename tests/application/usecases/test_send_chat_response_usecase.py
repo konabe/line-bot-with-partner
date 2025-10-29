@@ -11,13 +11,15 @@ class FakeEvent:
 def test_execute_success():
     sent = {}
 
-    def fake_reply(req: ReplyMessageRequest):
-        sent["req"] = req
+    class FakeLineAdapter:
+        def reply_message(self, req: ReplyMessageRequest):
+            sent["req"] = req
 
-    def fake_chatgpt(msg: str):
-        return "応答: " + msg
+    class FakeOpenAI:
+        def get_chatgpt_response(self, user_message: str) -> str:
+            return "応答: " + user_message
 
-    usecase = SendChatResponseUsecase(fake_reply, fake_chatgpt)
+    usecase = SendChatResponseUsecase(FakeLineAdapter(), FakeOpenAI())
     ev = FakeEvent()
     usecase.execute(ev, "こんにちは")
 
@@ -32,13 +34,15 @@ def test_execute_success():
 def test_execute_failure():
     sent = {}
 
-    def fake_reply(req: ReplyMessageRequest):
-        sent["req"] = req
+    class FakeLineAdapter:
+        def reply_message(self, req: ReplyMessageRequest):
+            sent["req"] = req
 
-    def failing_chatgpt(msg: str):
-        raise RuntimeError("api error")
+    class FailingOpenAI:
+        def get_chatgpt_response(self, user_message: str) -> str:
+            raise RuntimeError("api error")
 
-    usecase = SendChatResponseUsecase(fake_reply, failing_chatgpt)
+    usecase = SendChatResponseUsecase(FakeLineAdapter(), FailingOpenAI())
     ev = FakeEvent()
     usecase.execute(ev, "こんにちは")
 
