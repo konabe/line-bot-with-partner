@@ -1,6 +1,7 @@
 import dataclasses
-import pytest
 from typing import Any, cast
+
+import pytest
 
 from src.domain.models.pokemon_info import PokemonInfo
 

@@ -1,9 +1,10 @@
 from typing import Callable
+
 from linebot.v3.messaging.models import (
-    TemplateMessage,
     ButtonsTemplate,
     PostbackAction,
     ReplyMessageRequest,
+    TemplateMessage,
 )
 
 

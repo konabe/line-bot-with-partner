@@ -1,6 +1,7 @@
 """じゃんけんドメインクラスの単体テスト"""
 
 import pytest
+
 from src.domain.models.janken import Hand, JankenBattle, JankenGame
 
 

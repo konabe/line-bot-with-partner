@@ -1,10 +1,12 @@
 import os
+
 from dotenv import load_dotenv
 from flask import Flask
 from linebot.v3.webhook import WebhookHandler
-from .infrastructure.adapters.line_adapter import LineMessagingAdapter
+
 from .application.handler_registration import register_handlers
 from .application.startup_notify import notify_startup_if_configured
+from .infrastructure.adapters.line_adapter import LineMessagingAdapter
 from .infrastructure.logger import create_logger
 
 load_dotenv()

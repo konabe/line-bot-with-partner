@@ -1,9 +1,10 @@
-import logging
 import json
-from flask import request, abort
-from linebot.v3.webhook import WebhookHandler
+import logging
+
+from flask import abort, request
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+from linebot.v3.webhook import WebhookHandler
 
 logger = logging.getLogger(__name__)
 

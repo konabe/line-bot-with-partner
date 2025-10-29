@@ -1,6 +1,8 @@
 import os
-import requests
 from typing import Optional
+
+import requests
+
 from ..logger import Logger, create_logger
 
 

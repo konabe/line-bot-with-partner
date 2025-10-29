@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 
 from src.application.usecases.send_weather_usecase import SendWeatherUsecase

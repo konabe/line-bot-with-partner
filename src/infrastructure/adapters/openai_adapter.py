@@ -1,9 +1,10 @@
-import os
-import requests
 import datetime
 import json
-from zoneinfo import ZoneInfo
+import os
 from typing import Optional
+from zoneinfo import ZoneInfo
+
+import requests
 
 from ..logger import Logger, create_logger
 

@@ -1,4 +1,5 @@
-from typing import Dict, Callable, Any, Optional
+from typing import Any, Callable, Dict, Optional
+
 from src.domain.services.janken_game_master_service import JankenGameMasterService
 
 

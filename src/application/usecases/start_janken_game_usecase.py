@@ -2,9 +2,9 @@ from typing import Callable, Optional
 
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 
-from ..types import PostbackEventLike
 from ...domain.services.janken_game_master_service import JankenGameMasterService
-from ...infrastructure.logger import create_logger, Logger
+from ...infrastructure.logger import Logger, create_logger
+from ..types import PostbackEventLike
 
 
 class StartJankenGameUsecase:

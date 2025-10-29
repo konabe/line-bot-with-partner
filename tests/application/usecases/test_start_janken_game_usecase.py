@@ -1,6 +1,7 @@
 from typing import Optional
-from src.application.usecases.start_janken_game_usecase import StartJankenGameUsecase
+
 from src.application.types import PostbackEventLike
+from src.application.usecases.start_janken_game_usecase import StartJankenGameUsecase
 
 
 def _make_event(data: Optional[str], user_id: str = "U111") -> PostbackEventLike:

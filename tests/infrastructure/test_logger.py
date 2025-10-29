@@ -1,6 +1,6 @@
 import logging
 
-from src.infrastructure.logger import create_logger, StdLogger
+from src.infrastructure.logger import StdLogger, create_logger
 
 
 def test_create_logger_returns_stdlogger():

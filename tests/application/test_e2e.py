@@ -18,13 +18,13 @@ def test_callback_invalid_signature():
 
 
 def test_callback_valid_signature():
-    import hmac
-    import hashlib
     import base64
-    import os
+    import hashlib
+    import hmac
 
     # LINE公式Webhook仕様に合わせたMessageEvent JSON
     import json
+    import os
 
     body_dict = {
         "destination": "U123",

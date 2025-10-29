@@ -1,6 +1,7 @@
-from ..logger import create_logger, Logger
-from typing import Optional
 import os
+from typing import Optional
+
+from ..logger import Logger, create_logger
 
 
 class LineMessagingAdapter:
@@ -12,9 +13,9 @@ class LineMessagingAdapter:
 
     def init(self, access_token: str):
         try:
-            from linebot.v3.messaging.configuration import Configuration
-            from linebot.v3.messaging.api_client import ApiClient
             from linebot.v3.messaging import MessagingApi
+            from linebot.v3.messaging.api_client import ApiClient
+            from linebot.v3.messaging.configuration import Configuration
 
             _config = Configuration(access_token=access_token)
             _api_client = ApiClient(configuration=_config)

@@ -6,6 +6,7 @@ import os
 from typing import Callable, Optional
 
 from linebot.v3.messaging.models import PushMessageRequest, TextMessage
+
 from ..infrastructure.logger import Logger
 
 
