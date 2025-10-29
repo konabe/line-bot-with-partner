@@ -234,4 +234,3 @@ MIT
 - [OpenAI API](https://platform.openai.com/docs/api-reference/chat)
 - [OpenWeatherMap API](https://openweathermap.org/api)
 - [PokeAPI](https://pokeapi.co/)
-

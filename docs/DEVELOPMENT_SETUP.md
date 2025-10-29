@@ -96,7 +96,7 @@ pip install -r requirements-dev.txt
 
 - [ ] `make setup` が正常に実行される
 - [ ] `make test` ですべてのテストがパスする
-- [ ] `make lint` でエラーが出ない  
+- [ ] `make lint` でエラーが出ない
 - [ ] VS Code で型チェックエラーが表示されない
 - [ ] `.env` ファイルが設定されている（必要に応じて）
 
