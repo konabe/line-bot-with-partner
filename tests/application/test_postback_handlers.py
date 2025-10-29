@@ -42,9 +42,7 @@ def test_handle_postback_success(monkeypatch):
             FakeService.instantiated_count += 1
 
         def play_and_make_reply(self, user_hand_input: str, user_label: str) -> str:
-            return (
-                f"{user_label}: {user_hand_input}\n" f"Bot: ✌️\n" f"結果: あなたの勝ち！"
-            )
+            return f"{user_label}: {user_hand_input}\n" f"Bot: ✌️\n" f"結果: あなたの勝ち！"
 
     sent = []
 

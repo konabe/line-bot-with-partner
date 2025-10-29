@@ -26,10 +26,7 @@ class SendMealUsecase:
             suggestion = None
 
         if not suggestion:
-            msg = (
-                "申し訳ないです。おすすめを取得できませんでした。"
-                " 管理者に OPENAI_API_KEY の設定を確認てもらってください。"
-            )
+            msg = "申し訳ないです。おすすめを取得できませんでした。" " 管理者に OPENAI_API_KEY の設定を確認てもらってください。"
             reply_message_request = ReplyMessageRequest(
                 replyToken=event.reply_token,
                 messages=[TextMessage(text=msg, quickReply=None, quoteToken=None)],

@@ -26,10 +26,7 @@ class SendChatResponseUsecase:
             response = None
 
         if not response:
-            msg = (
-                "申し訳ないです。応答を生成できませんでした。"
-                "管理者に OPENAI_API_KEY の設定を確認してもらってください。"
-            )
+            msg = "申し訳ないです。応答を生成できませんでした。" "管理者に OPENAI_API_KEY の設定を確認してもらってください。"
             reply_message_request = ReplyMessageRequest(
                 replyToken=event.reply_token,
                 messages=[TextMessage(text=msg, quickReply=None, quoteToken=None)],

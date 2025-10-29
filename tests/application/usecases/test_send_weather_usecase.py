@@ -62,9 +62,7 @@ class MappingAdapter:
         self.mapping = mapping
 
     def get_weather_text(self, location: str) -> str:
-        return self.mapping.get(
-            location, f"{location}の天気情報が見つかりませんでした。"
-        )
+        return self.mapping.get(location, f"{location}の天気情報が見つかりませんでした。")
 
 
 def test_plain_tenki_lists_multiple(monkeypatch):

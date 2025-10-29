@@ -42,14 +42,18 @@ class SendWeatherUsecase:
 
             cfg = os.environ.get("WEATHER_LOCATIONS")
             if not cfg:
-                reply_text = "表示する都市が設定されていません。環境変数 WEATHER_LOCATIONS にカンマ区切りの都市名を設定してください。"
+                reply_text = (
+                    "表示する都市が設定されていません。環境変数 WEATHER_LOCATIONS にカンマ区切りの都市名を設定してください。"
+                )
             else:
                 # カンマまたは改行・空白で区切られている想定
                 parts = [
                     p.strip() for p in cfg.replace("\n", ",").split(",") if p.strip()
                 ]
                 if not parts:
-                    reply_text = "表示する都市が設定されていません。環境変数 WEATHER_LOCATIONS にカンマ区切りの都市名を設定してください。"
+                    reply_text = (
+                        "表示する都市が設定されていません。環境変数 WEATHER_LOCATIONS にカンマ区切りの都市名を設定してください。"
+                    )
                 else:
                     texts = []
                     for city in parts:
