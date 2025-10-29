@@ -19,7 +19,14 @@ def test_execute_sends_janken_template():
     def fake_safe_reply(req):
         sent.append(req)
 
-    svc = SendJankenOptionsUsecase(fake_safe_reply)
+    class FakeLineAdapter:
+        def __init__(self, fn):
+            self._fn = fn
+
+        def reply_message(self, req):
+            return self._fn(req)
+
+    svc = SendJankenOptionsUsecase(FakeLineAdapter(fake_safe_reply))
     event = _make_event("dummy-token")
 
     svc.execute(event)
@@ -42,7 +49,14 @@ def test_execute_propagates_exception_from_safe_reply():
     def bad_safe_reply(_):
         raise RuntimeError("send failed")
 
-    svc = SendJankenOptionsUsecase(bad_safe_reply)
+    class FakeLineAdapter:
+        def __init__(self, fn):
+            self._fn = fn
+
+        def reply_message(self, req):
+            return self._fn(req)
+
+    svc = SendJankenOptionsUsecase(FakeLineAdapter(bad_safe_reply))
     event = _make_event("t")
 
     with pytest.raises(RuntimeError):

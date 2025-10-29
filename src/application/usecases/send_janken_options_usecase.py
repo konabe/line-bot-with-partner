@@ -1,5 +1,3 @@
-from typing import Callable
-
 from linebot.v3.messaging.models import (
     ButtonsTemplate,
     PostbackAction,
@@ -7,10 +5,12 @@ from linebot.v3.messaging.models import (
     TemplateMessage,
 )
 
+from .protocols import LineAdapterProtocol
+
 
 class SendJankenOptionsUsecase:
-    def __init__(self, safe_reply_message: Callable[[ReplyMessageRequest], None]):
-        self._safe_reply = safe_reply_message
+    def __init__(self, line_adapter: LineAdapterProtocol):
+        self._line_adapter = line_adapter
 
     def execute(self, event) -> None:
         """イベント情報を受け取り、じゃんけんの選択テンプレートを返信する。"""
@@ -55,4 +55,4 @@ class SendJankenOptionsUsecase:
             messages=[template],
             notificationDisabled=False,
         )
-        self._safe_reply(reply_message_request)
+        self._line_adapter.reply_message(reply_message_request)

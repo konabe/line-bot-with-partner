@@ -1,5 +1,4 @@
 import logging
-from typing import Callable, Protocol
 
 from linebot.v3.messaging import models
 
@@ -14,29 +13,19 @@ from .usecases.send_weather_usecase import SendWeatherUsecase
 logger = logging.getLogger(__name__)
 
 
-class DomainServices(Protocol):
-    """Domain層サービスのインターフェース"""
-
-    get_chatgpt_meal_suggestion: Callable[[], str]
-    get_chatgpt_response: Callable[[str], str]
-    # weather_adapter: object that provides get_weather_text(location: str) -> str
-    weather_adapter: object
-    # expose openai adapter instance for usecases that need direct access
-    openai_adapter: object
-
-
 class MessageHandler:
     """LINEメッセージイベントを処理するハンドラークラス"""
 
     def __init__(
         self,
-        safe_reply_message: Callable,
-        domain_services: DomainServices,
         line_adapter: object,
+        openai_adapter: object,
+        weather_adapter: object,
     ):
-        self.safe_reply_message = safe_reply_message
-        self.domain_services = domain_services
+        # adapter を直接注入する（DomainServices を廃止）
         self.line_adapter = line_adapter
+        self.openai_adapter = openai_adapter
+        self.weather_adapter = weather_adapter
 
     def handle_message(self, event) -> None:
         """LINE からのテキストメッセージイベントを処理します。"""
@@ -57,19 +46,15 @@ class MessageHandler:
 
     def _handle_weather(self, event, text: str) -> None:
         logger.info("天気リクエスト検出: usecase に委譲")
-        SendWeatherUsecase(
-            self.safe_reply_message, self.domain_services.weather_adapter
-        ).execute(event, text)
+        SendWeatherUsecase(self.line_adapter, self.weather_adapter).execute(event, text)
 
     def _handle_janken(self, event) -> None:
         logger.info("じゃんけんテンプレートを送信 (usecase に委譲)")
-        SendJankenOptionsUsecase(self.safe_reply_message).execute(event)
+        SendJankenOptionsUsecase(self.line_adapter).execute(event)
 
     def _handle_meal(self, event) -> None:
         logger.info("今日のご飯リクエストを受信: usecase に委譲")
-        SendMealUsecase(
-            self.safe_reply_message, self.domain_services.get_chatgpt_meal_suggestion
-        ).execute(event)
+        SendMealUsecase(self.line_adapter, self.openai_adapter).execute(event)
 
     def _handle_pokemon(self, event) -> None:
         """ポケモンリクエストを処理します。図鑑情報を取得して TemplateMessage (Buttons) を送信します。"""
@@ -89,7 +74,7 @@ class MessageHandler:
                 ],
                 notificationDisabled=False,
             )
-            self.safe_reply_message(reply_message_request)
+            self.line_adapter.reply_message(reply_message_request)
             return
 
         try:
@@ -106,7 +91,7 @@ class MessageHandler:
                         messages=[candidate],
                         notificationDisabled=False,
                     )
-                    self.safe_reply_message(reply_message_request)
+                    self.line_adapter.reply_message(reply_message_request)
                     return
             except Exception:
                 # continue to dict handling below
@@ -115,7 +100,7 @@ class MessageHandler:
             sdk_req = models.ReplyMessageRequest.parse_obj(
                 {"replyToken": event.reply_token, "messages": [candidate]}
             )
-            self.safe_reply_message(sdk_req)
+            self.line_adapter.reply_message(sdk_req)
             return
         except Exception as e:
             logger.error(f"ポケモンメッセージ送信エラー: {e}")
@@ -132,7 +117,7 @@ class MessageHandler:
                 ],
                 notificationDisabled=False,
             )
-            self.safe_reply_message(reply_message_request)
+            self.line_adapter.reply_message(reply_message_request)
 
     def _handle_chatgpt(self, event, text: str) -> None:
         logger.info("コマンド以外のメッセージを受信: usecase に委譲")
@@ -141,7 +126,7 @@ class MessageHandler:
 
         # cast to Any to satisfy the protocol typing in the usecase
         SendChatResponseUsecase(
-            cast(Any, self.line_adapter), cast(Any, self.domain_services.openai_adapter)
+            cast(Any, self.line_adapter), cast(Any, self.openai_adapter)
         ).execute(event, text)
 
     def _get_random_pokemon_zukan_info(self):

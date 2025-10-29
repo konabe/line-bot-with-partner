@@ -1,10 +1,11 @@
-from typing import Callable, Optional
+from typing import Optional
 
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 
 from ...domain.services.janken_game_master_service import JankenGameMasterService
 from ...infrastructure.logger import Logger, create_logger
 from ..types import PostbackEventLike
+from .protocols import LineAdapterProtocol
 
 
 class StartJankenGameUsecase:
@@ -15,13 +16,11 @@ class StartJankenGameUsecase:
 
     def __init__(
         self,
-        safe_reply_message: Callable[[ReplyMessageRequest], None],
-        profile_getter: Callable[[str], Optional[str]],
+        line_adapter: LineAdapterProtocol,
         janken_service: Optional[JankenGameMasterService] = None,
         logger: Optional[Logger] = None,
     ):
-        self._safe_reply = safe_reply_message
-        self._profile_getter = profile_getter
+        self._line_adapter = line_adapter
         self._janken_service = janken_service or JankenGameMasterService()
         self._logger: Logger = logger or create_logger(__name__)
 
@@ -37,7 +36,10 @@ class StartJankenGameUsecase:
         display_name: Optional[str] = None
         if user_id:
             try:
-                display_name = self._profile_getter(user_id)
+                # Line adapter にプロフィール取得を委譲する
+                display_name = self._line_adapter.get_display_name_from_line_profile(
+                    user_id
+                )
             except Exception:
                 # プロファイル取得失敗は無視してラベルはデフォルトにする
                 display_name = None
@@ -62,4 +64,4 @@ class StartJankenGameUsecase:
             messages=[TextMessage(text=reply, quickReply=None, quoteToken=None)],
             notificationDisabled=False,
         )
-        self._safe_reply(reply_message_request)
+        self._line_adapter.reply_message(reply_message_request)

@@ -1,27 +1,22 @@
-from typing import Callable
-
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+
+from .protocols import LineAdapterProtocol, WeatherAdapterProtocol
 
 
 class SendWeatherUsecase:
     """天気クエリのユースケース。
 
-    役割:
-    - テキストからロケーションを抽出する
-    - 天気サービス（関数）を呼び出す
-    - ReplyMessageRequest を作って返答する
-
-    コンストラクタで依存を注入する（safe_reply_message, weather_getter）。
+    コンストラクタで依存を注入する（LineAdapter, WeatherAdapter）。
     """
 
     def __init__(
-        self, safe_reply_message: Callable[[ReplyMessageRequest], None], weather_adapter
+        self, line_adapter: LineAdapterProtocol, weather_adapter: WeatherAdapterProtocol
     ):
-        """Initialize with a safe reply function and a weather adapter instance.
+        """Initialize with a Line adapter and a weather adapter instance.
 
         weather_adapter must provide a method `get_weather_text(location: str) -> str`.
         """
-        self._safe_reply = safe_reply_message
+        self._line_adapter = line_adapter
         self._weather_adapter = weather_adapter
 
     def _extract_location_from_weather_query(self, text: str) -> str:
@@ -72,4 +67,4 @@ class SendWeatherUsecase:
             messages=[TextMessage(text=reply_text, quickReply=None, quoteToken=None)],
             notificationDisabled=False,
         )
-        self._safe_reply(reply_message_request)
+        self._line_adapter.reply_message(reply_message_request)

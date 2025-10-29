@@ -17,8 +17,9 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
     # ルートを登録
     register_routes(app, handler, safe_reply_message)
 
-    # デフォルトの DomainServices をここで生成（遅延で OpenAIAdapter を生成）
+    # Create infrastructure adapters and a lazy OpenAI client holder.
     from ..domain import OpenAIAdapter
+    from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
     from ..infrastructure.adapters.weather_adapter import WeatherAdapter
 
     _openai_holder: dict = {"client": None}
@@ -29,31 +30,11 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
             _openai_holder["client"] = OpenAIAdapter()
         return _openai_holder["client"]
 
-    class DefaultDomainServices:
-        """DomainServicesプロトコルの実装"""
-
-        def __init__(self):
-            self.weather_adapter: object = _weather_adapter
-
-        @property
-        def openai_adapter(self):
-            return _get_openai_client()
-
-        def get_chatgpt_meal_suggestion(self) -> str:
-            return _get_openai_client().get_chatgpt_meal_suggestion()
-
-        def get_chatgpt_response(self, text: str) -> str:
-            return _get_openai_client().get_chatgpt_response(text)
-
-    default_domain_services = DefaultDomainServices()
-
-    from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
-
     # Create a Line adapter instance to be injected into handlers/usecases
     _line_adapter = LineMessagingAdapter(logger=create_logger(__name__))
 
     message_handler_instance = MessageHandler(
-        safe_reply_message, default_domain_services, _line_adapter
+        _line_adapter, _get_openai_client(), _weather_adapter
     )
 
     def message_handler(event):
@@ -64,8 +45,7 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
     # Reuse the same LineMessagingAdapter for postback profile lookups
     _postback_handler_instance = PostbackHandler(
         create_logger(__name__),
-        safe_reply_message,
-        _line_adapter.get_display_name_from_line_profile,
+        _line_adapter,
     )
 
     def postback_handler(event):

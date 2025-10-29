@@ -1,27 +1,27 @@
-from typing import Callable
-
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+
+from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
 
 
 class SendMealUsecase:
     """今日のご飯リクエストを処理するユースケース。
 
-    コンストラクタで依存を注入する（safe_reply_message, meal_suggester）。
-    meal_suggester は引数無しで推薦テキストを返す callable を想定します。
+    コンストラクタでアダプタのインスタンスを注入します。
+    OpenAI アダプタから食事推奨を取得し、Line アダプタで返信します。
     """
 
     def __init__(
         self,
-        safe_reply_message: Callable[[ReplyMessageRequest], None],
-        meal_suggester: Callable[[], str],
+        line_adapter: LineAdapterProtocol,
+        openai_adapter: OpenAIAdapterProtocol,
     ):
-        self._safe_reply = safe_reply_message
-        self._meal_suggester = meal_suggester
+        self._line_adapter = line_adapter
+        self._openai_adapter = openai_adapter
 
     def execute(self, event) -> None:
         """event を受け取り、ChatGPT からの推薦を取得して返信する。"""
         try:
-            suggestion = self._meal_suggester()
+            suggestion = self._openai_adapter.get_chatgpt_meal_suggestion()
         except Exception:
             suggestion = None
 
@@ -41,4 +41,4 @@ class SendMealUsecase:
                 notificationDisabled=False,
             )
 
-        self._safe_reply(reply_message_request)
+        self._line_adapter.reply_message(reply_message_request)

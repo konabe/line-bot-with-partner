@@ -11,6 +11,20 @@ class FakeJankenGame:
         return FakeJankenGame.behavior(user_hand)
 
 
+class FakeLineAdapter:
+    def __init__(self, fn, display_name_provider=None):
+        self._fn = fn
+        self._display_name_provider = display_name_provider
+
+    def reply_message(self, req):
+        return self._fn(req)
+
+    def get_display_name_from_line_profile(self, user_id: str) -> str:
+        if self._display_name_provider is None:
+            return "Alice"
+        return self._display_name_provider(user_id)
+
+
 def _make_event(data):
     class FakePostback:
         def __init__(self, data):
@@ -69,7 +83,7 @@ def test_handle_postback_success(monkeypatch):
             pass
 
     handler = postback_handlers.PostbackHandler(
-        _FakeLogger(), fake_safe_reply, lambda uid: "Alice", janken_service=FakeService()  # type: ignore
+        _FakeLogger(), FakeLineAdapter(fake_safe_reply), janken_service=FakeService()  # type: ignore
     )
     handler.handle_postback(event)  # type: ignore
 
@@ -118,7 +132,7 @@ def test_handle_postback_invalid_hand(monkeypatch):
             pass
 
     handler = postback_handlers.PostbackHandler(
-        _FakeLogger(), fake_safe_reply, lambda uid: "Alice", janken_service=FakeServiceErr()  # type: ignore
+        _FakeLogger(), FakeLineAdapter(fake_safe_reply), janken_service=FakeServiceErr()  # type: ignore
     )
     handler.handle_postback(event)  # type: ignore
 
@@ -172,7 +186,7 @@ def test_handle_postback_non_janken(monkeypatch):
 
     # Pass a fake service instance but it should not be used
     handler = postback_handlers.PostbackHandler(
-        _FakeLogger(), fake_safe_reply, lambda uid: "Alice", janken_service=FakeService()  # type: ignore
+        _FakeLogger(), FakeLineAdapter(fake_safe_reply), janken_service=FakeService()  # type: ignore
     )
     handler.handle_postback(event)  # type: ignore
 

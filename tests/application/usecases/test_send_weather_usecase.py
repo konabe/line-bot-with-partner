@@ -10,6 +10,14 @@ class FakeEvent:
         self.reply_token = "dummy"
 
 
+class FakeLineAdapter:
+    def __init__(self, fn):
+        self._fn = fn
+
+    def reply_message(self, req):
+        return self._fn(req)
+
+
 def test_execute_with_location():
     replies = []
 
@@ -21,7 +29,14 @@ def test_execute_with_location():
             assert loc == "大阪"
             return "大阪: 晴れ"
 
-    svc = SendWeatherUsecase(fake_safe_reply, FakeAdapter())
+    class FakeLineAdapter:
+        def __init__(self, fn):
+            self._fn = fn
+
+        def reply_message(self, req):
+            return self._fn(req)
+
+    svc = SendWeatherUsecase(FakeLineAdapter(fake_safe_reply), FakeAdapter())
     evt = FakeEvent()
     svc.execute(evt, "大阪の天気")
 
@@ -41,7 +56,7 @@ def test_execute_without_location():
             assert loc == "東京"
             return "東京: 曇り"
 
-    svc = SendWeatherUsecase(fake_safe_reply, FakeAdapter2())
+    svc = SendWeatherUsecase(FakeLineAdapter(fake_safe_reply), FakeAdapter2())
     evt = FakeEvent()
     svc.execute(evt, "天気教えて")
 
@@ -76,7 +91,7 @@ def test_plain_tenki_lists_multiple(monkeypatch):
         sent["req"] = req
 
     adapter = MappingAdapter(mapping)
-    usecase = SendWeatherUsecase(fake_reply, adapter)
+    usecase = SendWeatherUsecase(FakeLineAdapter(fake_reply), adapter)
     ev = DummyEvent()
     usecase.execute(ev, "天気")
 
@@ -98,7 +113,7 @@ def test_plain_tenki_no_env(monkeypatch):
         sent["req"] = req
 
     adapter = MappingAdapter({})
-    usecase = SendWeatherUsecase(fake_reply, adapter)
+    usecase = SendWeatherUsecase(FakeLineAdapter(fake_reply), adapter)
     ev = DummyEvent()
     usecase.execute(ev, "天気")
 

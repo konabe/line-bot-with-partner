@@ -17,7 +17,18 @@ def test_execute_success():
     def fake_suggester():
         return "今日のご飯: カレー（簡単レシピ付き）"
 
-    usecase = SendMealUsecase(fake_reply, fake_suggester)
+    class FakeLineAdapter:
+        def __init__(self, fn):
+            self._fn = fn
+
+        def reply_message(self, req):
+            return self._fn(req)
+
+    class FakeOpenAIAdapter:
+        def get_chatgpt_meal_suggestion(self):
+            return fake_suggester()
+
+    usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapter())
     ev = FakeEvent()
     usecase.execute(ev)
 
@@ -38,7 +49,18 @@ def test_execute_failure():
     def failing_suggester():
         raise RuntimeError("api error")
 
-    usecase = SendMealUsecase(fake_reply, failing_suggester)
+    class FakeLineAdapter:
+        def __init__(self, fn):
+            self._fn = fn
+
+        def reply_message(self, req):
+            return self._fn(req)
+
+    class FakeOpenAIAdapterFail:
+        def get_chatgpt_meal_suggestion(self):
+            return failing_suggester()
+
+    usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapterFail())
     ev = FakeEvent()
     usecase.execute(ev)
 
