@@ -65,6 +65,30 @@ Webhook を動かすには public URL が必要です（ngrok 等を使用）。
 
 ## 開発者向け情報
 
+## Developer setup (recommended)
+
+To make development easier and keep code style consistent, run the following once after cloning:
+
+```bash
+# create a virtual env, activate it, then:
+python -m pip install --upgrade pip
+python -m pip install -r requirements-dev.txt
+
+# install pre-commit git hooks for this repository
+python -m pre_commit install
+# optionally install pre-push hooks as well
+python -m pre_commit install --hook-type pre-push
+```
+
+After this, `pre-commit` will run configured checks (isort, black, flake8, etc.) automatically on commit.
+
+If you want to run all hooks manually anytime:
+
+```bash
+python -m pre_commit run --all-files
+```
+
+
 ### 🛠️ 開発環境
 
 #### VS Code 設定
