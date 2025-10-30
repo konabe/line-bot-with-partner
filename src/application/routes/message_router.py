@@ -8,6 +8,7 @@ from ..usecases.protocols import (
     WeatherAdapterProtocol,
 )
 from ..usecases.send_chat_response_usecase import SendChatResponseUsecase
+from ..usecases.send_digimon_usecase import SendDigimonUsecase
 from ..usecases.send_janken_options_usecase import SendJankenOptionsUsecase
 from ..usecases.send_meal_usecase import SendMealUsecase
 from ..usecases.send_pokemon_zukan_usecase import SendPokemonZukanUsecase
@@ -23,6 +24,7 @@ class MessageRouter:
         openai_adapter: OpenAIAdapterProtocol,
         weather_adapter: WeatherAdapterProtocol,
         pokemon_adapter=None,
+        digimon_adapter=None,
         logger: Optional[Logger] = None,
         janken_service: Optional[JankenGameMasterService] = None,
     ):
@@ -30,6 +32,7 @@ class MessageRouter:
         self.openai_adapter = openai_adapter
         self.weather_adapter = weather_adapter
         self.pokemon_adapter = pokemon_adapter
+        self.digimon_adapter = digimon_adapter
         self.logger = logger or create_logger(__name__)
         self.janken_service = janken_service or JankenGameMasterService()
 
@@ -82,6 +85,8 @@ class MessageRouter:
             return self._route_meal(event)
         if t == "ポケモン":
             return self._route_pokemon_zukan(event)
+        if t == "デジモン":
+            return self._route_digimon(event)
         if t.startswith("ぐんまちゃん、"):
             return self._route_chatgpt(event, text)
 
@@ -100,6 +105,10 @@ class MessageRouter:
     def _route_pokemon_zukan(self, event) -> None:
         logger.info("ポケモンリクエスト受信: usecase に委譲")
         SendPokemonZukanUsecase(self.line_adapter, self.pokemon_adapter).execute(event)
+
+    def _route_digimon(self, event) -> None:
+        logger.info("デジモンリクエスト受信: usecase に委譲")
+        SendDigimonUsecase(self.line_adapter, self.digimon_adapter).execute(event)
 
     def _route_chatgpt(self, event, text: str) -> None:
         logger.info("コマンド以外のメッセージを受信: usecase に委譲")

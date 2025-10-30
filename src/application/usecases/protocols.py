@@ -23,3 +23,8 @@ class OpenAIAdapterProtocol(Protocol):
 class WeatherAdapterProtocol(Protocol):
     def get_weather_text(self, location: str) -> str:
         ...
+
+
+class DigimonAdapterProtocol(Protocol):
+    def get_random_digimon_info(self) -> Any:
+        ...

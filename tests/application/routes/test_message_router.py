@@ -72,6 +72,24 @@ class FakePokemonAdapter:
         )
 
 
+class FakeDigimonAdapter:
+    """テスト用デジモンアダプタ"""
+
+    def __init__(self):
+        self.get_random_digimon_info_calls = []
+
+    def get_random_digimon_info(self):
+        from src.domain.models.digimon_info import DigimonInfo
+
+        self.get_random_digimon_info_calls.append(True)
+        return DigimonInfo(
+            id=1,
+            name="Agumon",
+            level="Rookie",
+            image_url="https://example.com/agumon.png",
+        )
+
+
 class FakeLogger:
     """テスト用ロガー"""
 
@@ -266,6 +284,33 @@ class TestMessageRouterPokemonRoute:
         router.route_message(event)
 
         # line_adapter.reply_message が呼ばれていることを確認（図鑑テンプレート送信）
+        assert len(line_adapter.reply_message_calls) == 1
+
+
+class TestMessageRouterDigimonRoute:
+    """デジモンルーティングのテスト"""
+
+    def test_route_digimon_message(self):
+        """「デジモン」メッセージがデジモン usecase に委譲されること"""
+        line_adapter = FakeLineAdapter()
+        openai_adapter = FakeOpenAIAdapter()
+        weather_adapter = FakeWeatherAdapter()
+        digimon_adapter = FakeDigimonAdapter()
+        logger = FakeLogger()
+
+        router = MessageRouter(
+            line_adapter,
+            openai_adapter,
+            weather_adapter,
+            pokemon_adapter=None,
+            digimon_adapter=digimon_adapter,
+            logger=logger,
+        )
+
+        event = _make_message_event("デジモン")
+        router.route_message(event)
+
+        assert len(digimon_adapter.get_random_digimon_info_calls) == 1
         assert len(line_adapter.reply_message_calls) == 1
 
 

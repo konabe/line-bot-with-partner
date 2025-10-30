@@ -9,6 +9,7 @@ from src.application.routes.message_router import MessageRouter
 from src.application.routes.postback_router import PostbackRouter
 
 from ..domain import OpenAIAdapter
+from ..infrastructure.adapters.digimon_adapter import DigimonApiAdapter
 from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
 from ..infrastructure.adapters.pokemon_adapter import PokemonApiAdapter
 from ..infrastructure.adapters.weather_adapter import WeatherAdapter
@@ -38,6 +39,7 @@ def bind_routes(
     _openai_holder: dict = {"client": None}
     _weather_adapter = WeatherAdapter()
     _pokemon_adapter = PokemonApiAdapter()
+    _digimon_adapter = DigimonApiAdapter()
 
     def _get_openai_client():
         if _openai_holder["client"] is None:
@@ -50,6 +52,7 @@ def bind_routes(
         _get_openai_client(),
         _weather_adapter,
         _pokemon_adapter,
+        _digimon_adapter,
         logger=adapter_logger,
     )
 
