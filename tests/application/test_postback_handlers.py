@@ -1,3 +1,8 @@
+from typing import cast
+
+from src.application.types import PostbackEventLike
+
+
 class FakeJankenGame:
     behavior = None
     instantiated_count = 0
@@ -41,7 +46,10 @@ def _make_event(data):
 
 def test_handle_postback_success(monkeypatch):
     """ポストバックでじゃんけんが正常に処理され、reply が送信されること"""
+    from typing import cast
+
     from src.application.routes.postback_router import PostbackRouter
+    from src.application.types import PostbackEventLike
 
     # prepare fake service to return deterministic result
     class FakeService:
@@ -83,7 +91,7 @@ def test_handle_postback_success(monkeypatch):
         logger=_FakeLogger(),
         janken_service=FakeService(),  # type: ignore
     )
-    router.route_postback(event)
+    router.route_postback(cast(PostbackEventLike, event))
 
     assert len(sent) == 1
     req = sent[0]
@@ -134,7 +142,7 @@ def test_handle_postback_invalid_hand(monkeypatch):
         logger=_FakeLogger(),
         janken_service=FakeServiceErr(),  # type: ignore
     )
-    router.route_postback(event)
+    router.route_postback(cast(PostbackEventLike, event))
 
     assert len(sent) == 1
     req = sent[0]
@@ -190,7 +198,7 @@ def test_handle_postback_non_janken(monkeypatch):
         logger=_FakeLogger(),
         janken_service=FakeService(),  # type: ignore
     )
-    router.route_postback(event)
+    router.route_postback(cast(PostbackEventLike, event))
 
     # Should not have called safe_reply_message nor instantiated service beyond construction
     assert sent == []

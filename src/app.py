@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from flask import Flask
 from linebot.v3.webhook import WebhookHandler
 
-from .application.handler_registration import (
+from .application.add_routes import (
     create_startup_notification_usecase,
     register_handlers,
 )
@@ -24,7 +24,7 @@ CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 _line_adapter = LineMessagingAdapter(logger=logger)
 _line_adapter.init(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
-register_handlers(app, handler, _line_adapter.reply_message, _line_adapter)
+register_handlers(app, handler, _line_adapter)
 
 logger.info("App initialized (module imported)")
 
