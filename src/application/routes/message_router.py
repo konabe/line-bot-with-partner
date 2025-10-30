@@ -33,11 +33,20 @@ class MessageRouter:
         self.logger = logger or create_logger(__name__)
         self.janken_service = janken_service or JankenGameMasterService()
 
-    def route_message(self, event) -> None:
-        text = event.message.text
+    def route_message(self, event, message=None) -> None:
+        # Accept an optional parsed message argument that some webhook
+        # handler invocations may provide. Prefer `message.text` when
+        # available, otherwise fall back to `event.message.text`.
+        if message is not None and hasattr(message, "text"):
+            text = message.text
+        else:
+            # Defensive: event.message may not always be present in mocked
+            # contexts, so use getattr with fallback.
+            text = getattr(getattr(event, "message", None), "text", "")
+
         logger.debug(f"route_message called. text: {text}")
 
-        t = text.strip()
+        t = (text or "").strip()
         if "天気" in text:
             return self._route_weather(event, text)
         if t == "じゃんけん":
