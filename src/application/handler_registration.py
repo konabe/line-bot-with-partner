@@ -22,10 +22,12 @@ def register_handlers(
     # Create infrastructure adapters and a lazy OpenAI client holder.
     from ..domain import OpenAIAdapter
     from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
+    from ..infrastructure.adapters.pokemon_adapter import PokemonApiAdapter
     from ..infrastructure.adapters.weather_adapter import WeatherAdapter
 
     _openai_holder: dict = {"client": None}
     _weather_adapter = WeatherAdapter()
+    _pokemon_adapter = PokemonApiAdapter()
 
     def _get_openai_client():
         if _openai_holder["client"] is None:
@@ -36,7 +38,7 @@ def register_handlers(
     _line_adapter = line_adapter or LineMessagingAdapter(logger=create_logger(__name__))
 
     message_handler_instance = MessageHandler(
-        _line_adapter, _get_openai_client(), _weather_adapter
+        _line_adapter, _get_openai_client(), _weather_adapter, _pokemon_adapter
     )
 
     def message_handler(event):

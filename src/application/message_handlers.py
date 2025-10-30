@@ -1,10 +1,5 @@
 import logging
 
-from linebot.v3.messaging import models
-
-from ..infrastructure.line_model.zukan_button_template import (
-    create_pokemon_zukan_button_template,
-)
 from .usecases.protocols import (
     LineAdapterProtocol,
     OpenAIAdapterProtocol,
@@ -13,6 +8,7 @@ from .usecases.protocols import (
 from .usecases.send_chat_response_usecase import SendChatResponseUsecase
 from .usecases.send_janken_options_usecase import SendJankenOptionsUsecase
 from .usecases.send_meal_usecase import SendMealUsecase
+from .usecases.send_pokemon_zukan_usecase import SendPokemonZukanUsecase
 from .usecases.send_weather_usecase import SendWeatherUsecase
 
 logger = logging.getLogger(__name__)
@@ -26,11 +22,13 @@ class MessageHandler:
         line_adapter: LineAdapterProtocol,
         openai_adapter: OpenAIAdapterProtocol,
         weather_adapter: WeatherAdapterProtocol,
+        pokemon_adapter=None,
     ):
         # adapter を直接注入する（DomainServices を廃止）
         self.line_adapter = line_adapter
         self.openai_adapter = openai_adapter
         self.weather_adapter = weather_adapter
+        self.pokemon_adapter = pokemon_adapter
 
     def handle_message(self, event) -> None:
         """LINE からのテキストメッセージイベントを処理します。"""
@@ -45,7 +43,7 @@ class MessageHandler:
         if t == "今日のご飯":
             return self._handle_meal(event)
         if t == "ポケモン":
-            return self._handle_pokemon(event)
+            return self._handle_pokemon_zukan(event)
         if t.startswith("ぐんまちゃん、"):
             return self._handle_chatgpt(event, text)
 
@@ -61,68 +59,9 @@ class MessageHandler:
         logger.info("今日のご飯リクエストを受信: usecase に委譲")
         SendMealUsecase(self.line_adapter, self.openai_adapter).execute(event)
 
-    def _handle_pokemon(self, event) -> None:
-        """ポケモンリクエストを処理します。図鑑情報を取得して TemplateMessage (Buttons) を送信します。"""
-        logger.info("ポケモンリクエスト受信。図鑑風情報を返信")
-        info = self._get_random_pokemon_zukan_info()
-        if not info:
-            from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-
-            reply_message_request = ReplyMessageRequest(
-                replyToken=event.reply_token,
-                messages=[
-                    TextMessage(
-                        text="ポケモン図鑑情報の取得に失敗しました。",
-                        quickReply=None,
-                        quoteToken=None,
-                    )
-                ],
-                notificationDisabled=False,
-            )
-            self.line_adapter.reply_message(reply_message_request)
-            return
-
-        try:
-            candidate = create_pokemon_zukan_button_template(info)
-            try:
-                if hasattr(candidate, "dict") and candidate.__class__.__name__ in (
-                    "TextMessage",
-                    "TemplateMessage",
-                ):
-                    from linebot.v3.messaging.models import ReplyMessageRequest
-
-                    reply_message_request = ReplyMessageRequest(
-                        replyToken=event.reply_token,
-                        messages=[candidate],
-                        notificationDisabled=False,
-                    )
-                    self.line_adapter.reply_message(reply_message_request)
-                    return
-            except Exception:
-                # continue to dict handling below
-                pass
-
-            sdk_req = models.ReplyMessageRequest.parse_obj(
-                {"replyToken": event.reply_token, "messages": [candidate]}
-            )
-            self.line_adapter.reply_message(sdk_req)
-            return
-        except Exception as e:
-            logger.error(f"ポケモンメッセージ送信エラー: {e}")
-            from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-
-            reply_message_request = ReplyMessageRequest(
-                replyToken=event.reply_token,
-                messages=[
-                    TextMessage(
-                        text="ポケモン図鑑情報の送信に失敗しました。",
-                        quickReply=None,
-                        quoteToken=None,
-                    )
-                ],
-                notificationDisabled=False,
-            )
-            self.line_adapter.reply_message(reply_message_request)
+    def _handle_pokemon_zukan(self, event) -> None:
+        logger.info("ポケモンリクエスト受信: usecase に委譲")
+        SendPokemonZukanUsecase(self.line_adapter, self.pokemon_adapter).execute(event)
 
     def _handle_chatgpt(self, event, text: str) -> None:
         logger.info("コマンド以外のメッセージを受信: usecase に委譲")
@@ -133,62 +72,3 @@ class MessageHandler:
         SendChatResponseUsecase(
             cast(Any, self.line_adapter), cast(Any, self.openai_adapter)
         ).execute(event, text)
-
-    def _get_random_pokemon_zukan_info(self):
-        """ランダムなポケモンの図鑑情報を取得します"""
-        import random
-
-        try:
-            import requests
-
-            # ランダムなポケモンを取得（1-1000の範囲）
-            poke_id = random.randint(1, 1000)
-            resp = requests.get(
-                f"https://pokeapi.co/api/v2/pokemon/{poke_id}", timeout=10
-            )
-            resp.raise_for_status()
-            data = resp.json()
-
-            # 基本情報
-            zukan_no = data["id"]
-            name_en = data["name"]
-
-            # 日本語名を取得
-            name = name_en  # デフォルトは英語
-            species_url = data.get("species", {}).get("url")
-            if species_url:
-                try:
-                    species_resp = requests.get(species_url, timeout=10)
-                    species_resp.raise_for_status()
-                    species_data = species_resp.json()
-                    for name_info in species_data.get("names", []):
-                        if name_info.get("language", {}).get("name") == "ja":
-                            name = name_info.get("name")
-                            break
-                except Exception:
-                    pass  # 日本語名取得失敗時は英語名を使用
-
-            # タイプ
-            types = [t["type"]["name"] for t in data.get("types", [])]
-
-            # 画像URL
-            image_url = (
-                data.get("sprites", {})
-                .get("other", {})
-                .get("official-artwork", {})
-                .get("front_default")
-            )
-
-            # 進化情報（簡易版）
-            evolution = "基本形"  # 簡易実装
-
-            return {
-                "zukan_no": zukan_no,
-                "name": name,
-                "types": types,
-                "image_url": image_url,
-                "evolution": evolution,
-            }
-        except Exception as e:
-            logger.error(f"ポケモン情報取得エラー: {e}")
-            return None
