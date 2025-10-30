@@ -4,11 +4,10 @@ from dotenv import load_dotenv
 from flask import Flask
 from linebot.v3.webhook import WebhookHandler
 
-from application.usecases.send_startup_notification_usecase import (
+from .application.bind_routes import bind_routes
+from .application.usecases.send_startup_notification_usecase import (
     SendStartupNotificationUsecase,
 )
-
-from .application.bind_routes import bind_routes
 from .infrastructure.adapters.line_adapter import LineMessagingAdapter
 from .infrastructure.logger import create_logger
 
