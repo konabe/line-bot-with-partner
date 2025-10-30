@@ -1,6 +1,6 @@
-import logging
 from typing import Any, cast
 
+from ..infrastructure.logger import create_logger
 from .usecases.protocols import (
     LineAdapterProtocol,
     OpenAIAdapterProtocol,
@@ -12,11 +12,11 @@ from .usecases.send_meal_usecase import SendMealUsecase
 from .usecases.send_pokemon_zukan_usecase import SendPokemonZukanUsecase
 from .usecases.send_weather_usecase import SendWeatherUsecase
 
-logger = logging.getLogger(__name__)
+logger = create_logger(__name__)
 
 
-class MessageHandler:
-    """LINEメッセージイベントを処理するハンドラークラス"""
+class MessageRouter:
+    """LINEメッセージイベントをルーティングするクラス"""
 
     def __init__(
         self,
@@ -31,40 +31,40 @@ class MessageHandler:
         self.weather_adapter = weather_adapter
         self.pokemon_adapter = pokemon_adapter
 
-    def handle_message(self, event) -> None:
-        """LINE からのテキストメッセージイベントを処理します。"""
+    def route_message(self, event) -> None:
+        """LINE からのテキストメッセージイベントをルーティングします。"""
         text = event.message.text
-        logger.debug(f"handle_message called. text: {text}")
+        logger.debug(f"route_message called. text: {text}")
 
         t = text.strip()
         if "天気" in text:
-            return self._handle_weather(event, text)
+            return self._route_weather(event, text)
         if t == "じゃんけん":
-            return self._handle_janken(event)
+            return self._route_janken(event)
         if t == "今日のご飯":
-            return self._handle_meal(event)
+            return self._route_meal(event)
         if t == "ポケモン":
-            return self._handle_pokemon_zukan(event)
+            return self._route_pokemon_zukan(event)
         if t.startswith("ぐんまちゃん、"):
-            return self._handle_chatgpt(event, text)
+            return self._route_chatgpt(event, text)
 
-    def _handle_weather(self, event, text: str) -> None:
+    def _route_weather(self, event, text: str) -> None:
         logger.info("天気リクエスト検出: usecase に委譲")
         SendWeatherUsecase(self.line_adapter, self.weather_adapter).execute(event, text)
 
-    def _handle_janken(self, event) -> None:
+    def _route_janken(self, event) -> None:
         logger.info("じゃんけんテンプレートを送信 (usecase に委譲)")
         SendJankenOptionsUsecase(self.line_adapter).execute(event)
 
-    def _handle_meal(self, event) -> None:
+    def _route_meal(self, event) -> None:
         logger.info("今日のご飯リクエストを受信: usecase に委譲")
         SendMealUsecase(self.line_adapter, self.openai_adapter).execute(event)
 
-    def _handle_pokemon_zukan(self, event) -> None:
+    def _route_pokemon_zukan(self, event) -> None:
         logger.info("ポケモンリクエスト受信: usecase に委譲")
         SendPokemonZukanUsecase(self.line_adapter, self.pokemon_adapter).execute(event)
 
-    def _handle_chatgpt(self, event, text: str) -> None:
+    def _route_chatgpt(self, event, text: str) -> None:
         logger.info("コマンド以外のメッセージを受信: usecase に委譲")
         SendChatResponseUsecase(
             cast(Any, self.line_adapter), cast(Any, self.openai_adapter)
