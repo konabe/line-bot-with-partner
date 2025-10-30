@@ -2,9 +2,10 @@ from typing import Any, Optional, Protocol
 
 
 class LineAdapterProtocol(Protocol):
-    # 実装側の LineMessagingAdapter.reply_message は
-    # `reply_message(self, reply_message_request)` を受け取るため、名前を一致させます。
-    def reply_message(self, reply_message_request: Any) -> None:
+    # reply_message は SDK のモデルや dict を受け取るため、柔軟に受けられるようにする。
+    # エディタの型チェックでテスト用のフェイク関数が弾かれるのを避けるため
+    # 可変引数を許容します。
+    def reply_message(self, *args: Any, **kwargs: Any) -> Any:
         ...
 
     # 実装は存在しない/失敗する場合 None を返すため Optional[str] にします。

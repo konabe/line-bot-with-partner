@@ -5,6 +5,11 @@ from linebot.v3.messaging import models
 from ..infrastructure.line_model.zukan_button_template import (
     create_pokemon_zukan_button_template,
 )
+from .usecases.protocols import (
+    LineAdapterProtocol,
+    OpenAIAdapterProtocol,
+    WeatherAdapterProtocol,
+)
 from .usecases.send_chat_response_usecase import SendChatResponseUsecase
 from .usecases.send_janken_options_usecase import SendJankenOptionsUsecase
 from .usecases.send_meal_usecase import SendMealUsecase
@@ -18,9 +23,9 @@ class MessageHandler:
 
     def __init__(
         self,
-        line_adapter: object,
-        openai_adapter: object,
-        weather_adapter: object,
+        line_adapter: LineAdapterProtocol,
+        openai_adapter: OpenAIAdapterProtocol,
+        weather_adapter: WeatherAdapterProtocol,
     ):
         # adapter を直接注入する（DomainServices を廃止）
         self.line_adapter = line_adapter
