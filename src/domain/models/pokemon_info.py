@@ -4,14 +4,6 @@ from typing import Any, Dict, List, Optional
 
 @dataclass(frozen=True)
 class PokemonInfo:
-    """Value object representing the minimal data needed for the
-    pokemon zukan templates.
-
-    This is intentionally small and immutable. Callers can construct it
-    directly or use the `from_mapping` helper to convert a dict-like
-    payload (for backward compatibility).
-    """
-
     name: str
     types: List[str]
     image_url: Optional[str]
@@ -19,11 +11,6 @@ class PokemonInfo:
 
     @classmethod
     def from_mapping(cls, data: Dict[str, Any]) -> "PokemonInfo":
-        """Create a PokemonInfo from a mapping/dict-like object.
-
-        The input is tolerant: missing values are converted to sensible
-        defaults (empty name, empty types, 0 zukan_no).
-        """
         if data is None:
             data = {}
         name = data.get("name") or ""

@@ -1,5 +1,3 @@
-"""起動通知送信ユースケースのテスト"""
-
 import os
 from unittest.mock import Mock
 

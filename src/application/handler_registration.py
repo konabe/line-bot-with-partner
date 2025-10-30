@@ -21,7 +21,6 @@ def register_handlers(
 
     _line_adapter = line_adapter or LineMessagingAdapter(logger=create_logger(__name__))
 
-    # ルートを登録
     register_routes(app, handler, _line_adapter)
 
     from ..domain import OpenAIAdapter
@@ -48,7 +47,6 @@ def register_handlers(
     def message_handler(event):
         return message_router_instance.route_message(event)
 
-    # MessageRouter はメッセージとポストバックの両方をルーティングする
     postback_router_instance = PostbackRouter(
         _line_adapter,
         logger=create_logger(__name__),
@@ -63,5 +61,4 @@ def register_handlers(
 
 
 def create_startup_notification_usecase(line_adapter) -> SendStartupNotificationUsecase:
-    """起動通知ユースケースを作成する"""
     return SendStartupNotificationUsecase(line_adapter, create_logger(__name__))

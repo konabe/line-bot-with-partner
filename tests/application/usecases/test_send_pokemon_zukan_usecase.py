@@ -1,5 +1,3 @@
-"""ポケモン図鑑ユースケースのテスト"""
-
 from typing import Any
 
 from src.application.usecases.send_pokemon_zukan_usecase import SendPokemonZukanUsecase

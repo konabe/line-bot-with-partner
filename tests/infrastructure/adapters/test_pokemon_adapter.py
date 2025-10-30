@@ -1,5 +1,3 @@
-"""Pokemon API アダプターのテスト"""
-
 from src.infrastructure.adapters.pokemon_adapter import PokemonApiAdapter
 
 

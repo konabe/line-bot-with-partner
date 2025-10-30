@@ -1,13 +1,8 @@
-"""じゃんけんゲームのドメインロジック"""
-
 import random
 from typing import Dict, List
 
 
 class Hand:
-    """じゃんけんの手を表すクラス"""
-
-    # じゃんけんの手の定義（型アノテーションを明示的に追加）
     ROCK: "Hand"
     SCISSORS: "Hand"
     PAPER: "Hand"
@@ -30,12 +25,10 @@ class Hand:
 
     @classmethod
     def get_all_hands(cls) -> List["Hand"]:
-        """全ての手を取得"""
         return [cls.ROCK, cls.SCISSORS, cls.PAPER]
 
     @classmethod
     def from_emoji(cls, emoji: str) -> "Hand":
-        """絵文字からHandインスタンスを取得"""
         for hand in cls.get_all_hands():
             if hand.emoji == emoji:
                 return hand
@@ -49,9 +42,6 @@ Hand.PAPER = Hand("✋", "パー")
 
 
 class JankenBattle:
-    """じゃんけんの勝負を表すクラス"""
-
-    # 勝敗判定: (ユーザー, ボット) の組み合わせ
     WINNING_COMBINATIONS = [
         (Hand.ROCK, Hand.SCISSORS),  # グーはチョキに勝つ
         (Hand.SCISSORS, Hand.PAPER),  # チョキはパーに勝つ
@@ -63,7 +53,6 @@ class JankenBattle:
         self.bot_hand = bot_hand
 
     def get_result(self) -> str:
-        """勝敗結果を取得"""
         if self.user_hand == self.bot_hand:
             return "あいこ"
 
@@ -73,7 +62,6 @@ class JankenBattle:
             return "あなたの負け…"
 
     def to_dict(self) -> Dict[str, str]:
-        """結果を辞書形式で返す"""
         return {
             "user_hand": self.user_hand.emoji,
             "bot_hand": self.bot_hand.emoji,
@@ -82,17 +70,12 @@ class JankenBattle:
 
 
 class JankenGame:
-    """じゃんけんゲームを管理するドメインクラス"""
-
     def __init__(self):
         self._hands = Hand.get_all_hands()
 
     def play(self, user_hand_emoji: str) -> Dict[str, str]:
         """
         じゃんけんを実行し、結果を返す
-
-        Args:
-            user_hand_emoji: ユーザーの手（✊, ✌️, ✋）
 
         Returns:
             結果を含む辞書
@@ -113,11 +96,9 @@ class JankenGame:
         return battle.to_dict()
 
     def get_available_hands(self) -> List[Hand]:
-        """利用可能な手の一覧を返す"""
         return self._hands.copy()
 
     def get_hand_name(self, hand_emoji: str) -> str:
-        """手の絵文字から名前を取得"""
         try:
             hand = Hand.from_emoji(hand_emoji)
             return hand.name

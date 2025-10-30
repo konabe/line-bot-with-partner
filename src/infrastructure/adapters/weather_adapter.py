@@ -13,7 +13,6 @@ class WeatherAdapter:
         self.logger: Logger = logger or create_logger(__name__)
 
     def get_weather_text(self, location: str) -> str:
-        """指定された地域の天気情報をOpenWeatherMapから取得します"""
         if not self.api_key:
             self.logger.error("OPENWEATHERMAP_API_KEY is not set")
             return "天気情報の取得に失敗しました。管理者にAPI設定を確認してもらってください。"
@@ -35,7 +34,6 @@ class WeatherAdapter:
             response.raise_for_status()
             data = response.json()
 
-            # 天気情報を抽出
             weather_desc = data["weather"][0]["description"]
             temp = round(data["main"]["temp"])
             feels_like = round(data["main"]["feels_like"])

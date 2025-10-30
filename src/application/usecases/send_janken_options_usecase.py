@@ -13,7 +13,6 @@ class SendJankenOptionsUsecase:
         self._line_adapter = line_adapter
 
     def execute(self, event) -> None:
-        """イベント情報を受け取り、じゃんけんの選択テンプレートを返信する。"""
         template = TemplateMessage(
             altText="じゃんけんしましょう！",
             template=ButtonsTemplate(

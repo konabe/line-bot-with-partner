@@ -4,34 +4,20 @@ from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
 
 
 class SendChatResponseUsecase:
-    """汎用的な ChatGPT 応答ユースケース。
-
-    コンストラクタで safe_reply_message と chatgpt_callable を注入する。
-    chatgpt_callable は (user_message: str) -> str を返す callable を想定します。
-    """
-
     def __init__(
         self,
         line_adapter: LineAdapterProtocol,
         openai_adapter: OpenAIAdapterProtocol,
     ):
-        """コンストラクタでアダプタのインスタンスを注入します。
-
-        Args:
-            line_adapter: `LineMessagingAdapter` のインスタンス（reply_message を持つこと）
-            openai_adapter: `OpenAIAdapter` のインスタンス（get_chatgpt_response を持つこと）
-        """
         self._line_adapter = line_adapter
         self._openai_adapter = openai_adapter
 
     def execute(self, event, user_message: str) -> None:
-        """user_message に対してチャット応答を取得し、ReplyMessageRequest を送信する。"""
         try:
             response = None
             try:
                 response = self._openai_adapter.get_chatgpt_response(user_message)
             except Exception:
-                # OpenAI 側で何らかのエラーが発生した場合は None 扱いにしてユーザーに案内する
                 response = None
 
             if not response:
@@ -50,9 +36,6 @@ class SendChatResponseUsecase:
                     notificationDisabled=False,
                 )
 
-            # Line adapter に送信を委譲する（safe wrapper は adapter 側で実装される想定）
             self._line_adapter.reply_message(reply_message_request)
         except Exception:
-            # もし reply に失敗した場合はログ等は adapter 側で行われる想定なので
-            # ここでは例外を吸収して処理を終える。
             return

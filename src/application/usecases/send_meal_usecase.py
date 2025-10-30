@@ -4,12 +4,6 @@ from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
 
 
 class SendMealUsecase:
-    """今日のご飯リクエストを処理するユースケース。
-
-    コンストラクタでアダプタのインスタンスを注入します。
-    OpenAI アダプタから食事推奨を取得し、Line アダプタで返信します。
-    """
-
     def __init__(
         self,
         line_adapter: LineAdapterProtocol,
@@ -19,7 +13,6 @@ class SendMealUsecase:
         self._openai_adapter = openai_adapter
 
     def execute(self, event) -> None:
-        """event を受け取り、ChatGPT からの推薦を取得して返信する。"""
         try:
             suggestion = self._openai_adapter.get_chatgpt_meal_suggestion()
         except Exception:

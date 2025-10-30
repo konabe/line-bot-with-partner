@@ -9,15 +9,7 @@ from .protocols import LineAdapterProtocol
 
 
 class SendStartupNotificationUsecase:
-    """起動通知送信のユースケース"""
-
     def __init__(self, line_adapter: LineAdapterProtocol, logger: Logger = None):
-        """初期化
-
-        Args:
-            line_adapter: LINE SDK への通信アダプター
-            logger: ロガー（省略時は標準ロガーを作成）
-        """
         self.line_adapter = line_adapter
         self.logger = logger or create_logger(__name__)
 

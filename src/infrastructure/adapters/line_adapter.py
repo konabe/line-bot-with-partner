@@ -96,11 +96,6 @@ class LineMessagingAdapter:
             raise
 
     def get_display_name_from_line_profile(self, user_id: str) -> Optional[str]:
-        """Instance method: fetch displayName for a LINE user via the Messaging API.
-
-        This is the same logic as the previous module-level helper but uses
-        the adapter's injected logger (self.logger).
-        """
         try:
             import requests
         except Exception:

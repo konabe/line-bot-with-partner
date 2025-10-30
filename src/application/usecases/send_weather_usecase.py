@@ -4,18 +4,9 @@ from .protocols import LineAdapterProtocol, WeatherAdapterProtocol
 
 
 class SendWeatherUsecase:
-    """天気クエリのユースケース。
-
-    コンストラクタで依存を注入する（LineAdapter, WeatherAdapter）。
-    """
-
     def __init__(
         self, line_adapter: LineAdapterProtocol, weather_adapter: WeatherAdapterProtocol
     ):
-        """Initialize with a Line adapter and a weather adapter instance.
-
-        weather_adapter must provide a method `get_weather_text(location: str) -> str`.
-        """
         self._line_adapter = line_adapter
         self._weather_adapter = weather_adapter
 
@@ -28,10 +19,8 @@ class SendWeatherUsecase:
         return ""
 
     def execute(self, event, text: str) -> None:
-        """event とユーザーテキストを受け取り、天気を問い合わせて返信する。"""
         t = text.strip()
 
-        # ユーザーが正確に "天気" とだけ送った場合、環境変数から複数都市を読み一覧表示する
         if t == "天気":
             import os
 
@@ -53,7 +42,6 @@ class SendWeatherUsecase:
                     texts = []
                     for city in parts:
                         texts.append(self._weather_adapter.get_weather_text(city))
-                    # 各都市の結果を2行改行で区切ってまとめる
                     reply_text = "\n\n".join(texts)
         else:
             loc = self._extract_location_from_weather_query(text)

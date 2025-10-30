@@ -36,7 +36,6 @@ def register_routes(app, handler: WebhookHandler, line_adapter):
 
 
 def _handle_signature_error(body, line_adapter):
-    """InvalidSignatureError を処理し、ユーザーにエラーメッセージを送信します。"""
     try:
         data = json.loads(body)
         for ev in data.get("events", []):
@@ -59,7 +58,6 @@ def _handle_signature_error(body, line_adapter):
 
 
 def _handle_general_error(body, line_adapter):
-    """一般的な例外を処理し、ユーザーにエラーメッセージを送信します。"""
     try:
         data = json.loads(body)
         for ev in data.get("events", []):

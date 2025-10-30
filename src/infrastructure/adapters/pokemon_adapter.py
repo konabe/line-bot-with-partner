@@ -10,8 +10,6 @@ from ..logger import create_logger
 
 
 class PokemonApiAdapter:
-    """Pokemon API通信アダプター"""
-
     # ポケモンタイプの英日変換辞書
     TYPE_TRANSLATIONS = {
         "normal": "ノーマル",
@@ -38,9 +36,7 @@ class PokemonApiAdapter:
         self.logger = logger or create_logger(__name__)
 
     def get_random_pokemon_info(self) -> Optional[PokemonInfo]:
-        """ランダムなポケモンの図鑑情報を取得します"""
         try:
-            # ランダムなポケモンを取得（1-1000の範囲）
             poke_id = random.randint(1, 1000)
             self.logger.debug(f"Fetching Pokemon ID: {poke_id}")
 
@@ -50,18 +46,14 @@ class PokemonApiAdapter:
             resp.raise_for_status()
             data = resp.json()
 
-            # 基本情報
             zukan_no = data["id"]
             name_en = data["name"]
 
-            # 日本語名を取得
             name = self._get_japanese_name(data, name_en)
 
-            # タイプ（日本語に変換）
             type_names_en = [t["type"]["name"] for t in data.get("types", [])]
             types = self._translate_types_to_japanese(type_names_en)
 
-            # 画像URL
             image_url = (
                 data.get("sprites", {})
                 .get("other", {})

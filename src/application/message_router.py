@@ -17,8 +17,6 @@ logger = create_logger(__name__)
 
 
 class MessageRouter:
-    """LINEメッセージイベントとポストバックイベントをルーティングするクラス"""
-
     def __init__(
         self,
         line_adapter: LineAdapterProtocol,
@@ -28,17 +26,14 @@ class MessageRouter:
         logger: Optional[Logger] = None,
         janken_service: Optional[JankenGameMasterService] = None,
     ):
-        # adapter を直接注入する（DomainServices を廃止）
         self.line_adapter = line_adapter
         self.openai_adapter = openai_adapter
         self.weather_adapter = weather_adapter
         self.pokemon_adapter = pokemon_adapter
         self.logger = logger or create_logger(__name__)
-        # ドメインサービスは注入可能にしてテスト容易性を確保
         self.janken_service = janken_service or JankenGameMasterService()
 
     def route_message(self, event) -> None:
-        """LINE からのテキストメッセージイベントをルーティングします。"""
         text = event.message.text
         logger.debug(f"route_message called. text: {text}")
 

@@ -6,13 +6,6 @@ from src.domain.models.pokemon_info import PokemonInfo
 
 
 def create_pokemon_zukan_button_template(info: Union[PokemonInfo, Mapping]):
-    """Create a ButtonsTemplate-based TemplateMessage for a Pokemon.
-
-    Args:
-        info: either a `PokemonInfo` instance or a mapping (dict-like). If a
-            mapping is provided it will be converted with
-            `PokemonInfo.from_mapping` for backward compatibility.
-    """
     if not isinstance(info, PokemonInfo):
         info = PokemonInfo.from_mapping(dict(info or {}))
 

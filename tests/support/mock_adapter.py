@@ -1,24 +1,7 @@
-"""Mock messaging adapter for tests.
-
-This adapter records replies and pushes in memory so unit tests can assert on
-them without calling external APIs.
-"""
-
 from typing import Any, List
 
 
 class MockMessagingAdapter:
-    """In-memory messaging adapter used for tests.
-
-    Usage in tests:
-        from tests.support.mock_adapter import MockMessagingAdapter
-
-        mock = MockMessagingAdapter()
-        mock.init('test-token')
-
-    Then assert on mock.get_replies() / mock.get_pushes().
-    """
-
     def __init__(self) -> None:
         self.access_token: str | None = None
         self._replies: List[Any] = []

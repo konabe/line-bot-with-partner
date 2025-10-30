@@ -7,12 +7,6 @@ from .usecases.start_janken_game_usecase import StartJankenGameUsecase
 
 
 class PostbackRouter:
-    """ポストバックイベントをルーティングするクラス
-
-    現在は `janken:` 系のポストバックだけを扱います。将来的に
-    他のポストバック種別が増えた場合はここにルーティングを追加します。
-    """
-
     def __init__(
         self,
         line_adapter,
@@ -24,7 +18,6 @@ class PostbackRouter:
         self.janken_service = janken_service or JankenGameMasterService()
 
     def route_postback(self, event: PostbackEventLike) -> None:
-        """LINE からのポストバックイベントをルーティングします。"""
         data: str | None = event.postback.data
         self.logger.debug(f"route_postback called. data: {data}")
 
@@ -36,7 +29,6 @@ class PostbackRouter:
             self._route_janken_postback(event)
 
     def _route_janken_postback(self, event: PostbackEventLike) -> None:
-        """'janken:' で始まるポストバックをルーティングする。ユースケースに委譲する。"""
         StartJankenGameUsecase(
             line_adapter=self.line_adapter,
             janken_service=self.janken_service,
