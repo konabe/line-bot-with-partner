@@ -15,12 +15,11 @@ from ..infrastructure.adapters.pokemon_adapter import PokemonApiAdapter
 from ..infrastructure.adapters.weather_adapter import WeatherAdapter
 from ..infrastructure.logger import Logger, create_logger
 from .register_flask_routes import register_routes
-from .usecases.send_startup_notification_usecase import SendStartupNotificationUsecase
 
 logger = logging.getLogger(__name__)
 
 
-def register_handlers(
+def bind_routes(
     app: Any,
     handler: WebhookHandler,
     line_adapter: Optional[Any] = None,
@@ -66,9 +65,3 @@ def register_handlers(
         message_router_instance.route_message
     )
     handler.add(PostbackEvent)(postback_router_instance.route_postback)
-
-
-def create_startup_notification_usecase(
-    line_adapter: Any,
-) -> SendStartupNotificationUsecase:
-    return SendStartupNotificationUsecase(line_adapter, create_logger(__name__))

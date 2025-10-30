@@ -4,10 +4,11 @@ from dotenv import load_dotenv
 from flask import Flask
 from linebot.v3.webhook import WebhookHandler
 
-from .application.add_routes import (
-    create_startup_notification_usecase,
-    register_handlers,
+from application.usecases.send_startup_notification_usecase import (
+    SendStartupNotificationUsecase,
 )
+
+from .application.bind_routes import bind_routes
 from .infrastructure.adapters.line_adapter import LineMessagingAdapter
 from .infrastructure.logger import create_logger
 
@@ -24,7 +25,7 @@ CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 _line_adapter = LineMessagingAdapter(logger=logger)
 _line_adapter.init(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)
-register_handlers(app, handler, _line_adapter)
+bind_routes(app, handler, _line_adapter)
 
 logger.info("App initialized (module imported)")
 
@@ -41,8 +42,8 @@ def _notify_once_on_import() -> None:
     except FileExistsError:
         return
     try:
-        startup_notification_usecase = create_startup_notification_usecase(
-            _line_adapter
+        startup_notification_usecase = SendStartupNotificationUsecase(
+            _line_adapter, create_logger(__name__)
         )
         startup_notification_usecase.execute()
     except Exception as e:
