@@ -1,4 +1,11 @@
-from src.app import app
+import os
+
+# E2Eテスト用に必要な環境変数を事前に設定
+os.environ["OPENAI_API_KEY"] = "test-openai-key"
+os.environ["LINE_CHANNEL_SECRET"] = "test-line-secret"
+os.environ["LINE_CHANNEL_ACCESS_TOKEN"] = "test-line-token"
+
+from src.app import app  # noqa: E402
 
 
 def test_health():
