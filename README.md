@@ -146,7 +146,7 @@ pip install -r requirements-dev.txt
 src/
 ├── app.py                    # Flask アプリのエントリポイント
 ├── application/              # アプリケーション層
-│   ├── routes.py            # エンドポイント定義
+│   ├── register_flask_routes.py            # エンドポイント定義
 │   ├── message_handlers.py  # メッセージハンドラ
 │   ├── postback_handlers.py # ポストバックハンドラ
 │   └── usecases/            # ユースケース層

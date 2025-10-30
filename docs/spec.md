@@ -23,7 +23,7 @@
   - ports: ポート定義（`src/ports`）
 - 主要ファイル
   - `src/app.py`: Flask アプリの初期化、ハンドラ登録、起動通知（インポート時一度のみ）
-  - `src/application/routes.py`: `/health`, `/callback` エンドポイント
+  - `src/application/register_flask_routes.py`: `/health`, `/callback` エンドポイント
   - `src/application/message_handlers.py`: テキストメッセージのコマンド判定と処理
   - `src/application/handler_registration.py`: ハンドラの DI 構成
   - `src/application/startup_notify.py`: 起動通知ヘルパ
