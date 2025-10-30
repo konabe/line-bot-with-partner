@@ -4,8 +4,10 @@ from dotenv import load_dotenv
 from flask import Flask
 from linebot.v3.webhook import WebhookHandler
 
-from .application.handler_registration import register_handlers
-from .application.startup_notify import notify_startup_if_configured
+from .application.handler_registration import (
+    create_startup_notification_usecase,
+    register_handlers,
+)
 from .infrastructure.adapters.line_adapter import LineMessagingAdapter
 from .infrastructure.logger import create_logger
 
@@ -42,7 +44,10 @@ def _notify_once_on_import() -> None:
     except FileExistsError:
         return
     try:
-        notify_startup_if_configured(_line_adapter.push_message, logger)
+        startup_notification_usecase = create_startup_notification_usecase(
+            _line_adapter
+        )
+        startup_notification_usecase.execute()
     except Exception as e:
         logger.error(f"startup notify failed: {e}")
 

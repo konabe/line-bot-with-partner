@@ -8,6 +8,10 @@ class LineAdapterProtocol(Protocol):
     def reply_message(self, *args: Any, **kwargs: Any) -> Any:
         ...
 
+    # push_message も SDK のモデルを受け取る
+    def push_message(self, *args: Any, **kwargs: Any) -> Optional[bool]:
+        ...
+
     # 実装は存在しない/失敗する場合 None を返すため Optional[str] にします。
     def get_display_name_from_line_profile(self, user_id: str) -> Optional[str]:
         ...

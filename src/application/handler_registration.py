@@ -9,6 +9,7 @@ from ..infrastructure.logger import create_logger
 from .message_handlers import MessageHandler
 from .postback_handlers import PostbackHandler
 from .routes import register_routes
+from .usecases.send_startup_notification_usecase import SendStartupNotificationUsecase
 
 logger = logging.getLogger(__name__)
 
@@ -57,3 +58,8 @@ def register_handlers(
 
     handler.add(MessageEvent, message=TextMessageContent)(message_handler)
     handler.add(PostbackEvent)(postback_handler)
+
+
+def create_startup_notification_usecase(line_adapter) -> SendStartupNotificationUsecase:
+    """起動通知ユースケースを作成する"""
+    return SendStartupNotificationUsecase(line_adapter, create_logger(__name__))
