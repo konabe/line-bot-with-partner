@@ -17,8 +17,33 @@ class PostbackRouter:
         self.logger = logger or create_logger(__name__)
         self.janken_service = janken_service or JankenGameMasterService()
 
-    def route_postback(self, event: PostbackEventLike) -> None:
-        data: str | None = event.postback.data
+    def route_postback(self, *args, **kwargs) -> None:
+        # Be permissive about calling convention: webhook handler may call
+        # with (event) or (event, parsed_postback). Try to infer the event.
+        event = kwargs.get("event")
+        if len(args) == 1:
+            candidate = args[0]
+            # Heuristic: event-like objects have reply_token or source attributes
+            if (
+                hasattr(candidate, "reply_token")
+                or hasattr(candidate, "replyToken")
+                or hasattr(candidate, "source")
+            ):
+                event = candidate
+            else:
+                # If it's not event-like, assume it's a parsed message/postback object
+                # and try to find event in kwargs or elsewhere (not available here).
+                event = kwargs.get("event")
+        elif len(args) >= 2:
+            event = args[0]
+
+        if event is None:
+            self.logger.error(
+                "route_postback called but no event object could be inferred; skipping"
+            )
+            return
+
+        data: str | None = getattr(getattr(event, "postback", None), "data", None)
         self.logger.debug(f"route_postback called. data: {data}")
 
         if data is None:
