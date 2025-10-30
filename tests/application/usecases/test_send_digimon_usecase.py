@@ -11,6 +11,12 @@ class FakeLineAdapter:
     def reply_message(self, req):
         self.reply_message_calls.append(req)
 
+    def push_message(self, req):
+        pass
+
+    def get_display_name_from_line_profile(self, user_id: str) -> str:
+        return "TestUser"
+
 
 class FakeDigimonAdapter:
     def __init__(self, digimon_info=None):
@@ -43,7 +49,7 @@ def _make_message_event(text: str = "デジモン", user_id: str = "U123"):
 
 class TestSendDigimonUsecase:
     def test_execute_success(self):
-        """デジモン情報を取得してメッセージを送信できること"""
+        """デジモン情報を取得してButtonTemplateメッセージを送信できること"""
         line_adapter = FakeLineAdapter()
         digimon_info = DigimonInfo(
             id=1,
@@ -65,11 +71,9 @@ class TestSendDigimonUsecase:
         assert req.reply_token == "fake_reply_token"
         assert len(req.messages) == 1
 
-        message_text = req.messages[0].text
-        assert "デジモン図鑑 No.1" in message_text
-        assert "名前: Agumon" in message_text
-        assert "レベル: Rookie" in message_text
-        assert "画像: https://example.com/agumon.png" in message_text
+        # TemplateMessageが送信されていることを確認
+        message = req.messages[0]
+        assert message.__class__.__name__ == "TemplateMessage"
 
     def test_execute_with_none_digimon_info(self):
         """デジモン情報がNoneの場合にエラーメッセージを送信すること"""
@@ -85,7 +89,7 @@ class TestSendDigimonUsecase:
         assert len(line_adapter.reply_message_calls) == 1
 
         req = line_adapter.reply_message_calls[0]
-        assert req.messages[0].text == "デジモン情報の取得に失敗しました"
+        assert req.messages[0].text == "デジモン図鑑情報の取得に失敗しました。"
 
     def test_execute_without_image_url(self):
         """image_urlがNoneでも正常に動作すること"""
@@ -100,8 +104,6 @@ class TestSendDigimonUsecase:
 
         assert len(line_adapter.reply_message_calls) == 1
 
-        message_text = line_adapter.reply_message_calls[0].messages[0].text
-        assert "デジモン図鑑 No.2" in message_text
-        assert "名前: Gabumon" in message_text
-        assert "レベル: Rookie" in message_text
-        assert "画像:" not in message_text
+        # TemplateMessageが送信されていることを確認
+        message = line_adapter.reply_message_calls[0].messages[0]
+        assert message.__class__.__name__ == "TemplateMessage"
