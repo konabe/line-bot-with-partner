@@ -28,14 +28,12 @@ class PokemonInfo:
             data = {}
         name = data.get("name") or ""
         types_raw = data.get("types") or []
-        # Ensure list of strings
         types = [str(t) for t in types_raw] if types_raw else []
         image_url = data.get("image_url")
         zukan_no_raw = data.get("zukan_no")
         try:
             zukan_no = int(zukan_no_raw) if zukan_no_raw not in (None, "") else 0
         except Exception:
-            # Fallback to 0 if conversion fails
             zukan_no = 0
 
         return cls(name=name, types=types, image_url=image_url, zukan_no=zukan_no)

@@ -17,7 +17,6 @@ logger = logging.getLogger(__name__)
 def register_handlers(
     app, handler: WebhookHandler, safe_reply_message, line_adapter=None
 ):
-    # Use the provided line_adapter or create a new one
     from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
 
     _line_adapter = line_adapter or LineMessagingAdapter(logger=create_logger(__name__))
@@ -25,7 +24,6 @@ def register_handlers(
     # ルートを登録
     register_routes(app, handler, _line_adapter)
 
-    # Create infrastructure adapters and a lazy OpenAI client holder.
     from ..domain import OpenAIAdapter
     from ..infrastructure.adapters.pokemon_adapter import PokemonApiAdapter
     from ..infrastructure.adapters.weather_adapter import WeatherAdapter

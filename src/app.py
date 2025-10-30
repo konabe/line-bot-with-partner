@@ -21,9 +21,6 @@ CHANNEL_ACCESS_TOKEN = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 
 # Gunicorn 前提。ここで必要な初期化のみ行う。
 
-# Create a messaging infrastructure instance and initialize the messaging API.
-# Callers will use the instance's bound methods (no package-level wrappers).
-# Create a Line adapter instance and initialize the messaging API directly.
 _line_adapter = LineMessagingAdapter(logger=logger)
 _line_adapter.init(CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(CHANNEL_SECRET)

@@ -6,8 +6,6 @@ from ..logger import Logger, create_logger
 
 class LineMessagingAdapter:
     def __init__(self, logger: Optional[Logger] = None):
-        # logger can be injected for testing / customization. If not provided,
-        # create a StdLogger with this module's name.
         self.logger: Logger = logger or create_logger(__name__)
         self.messaging_api = None
 
@@ -31,9 +29,6 @@ class LineMessagingAdapter:
             )
             return
         try:
-            # We assume reply_message is called with SDK model instances
-            # (pydantic models or SDK models). Simply pass the model through to
-            # the SDK. For logging, try to obtain a serializable dict.
             try:
                 payload_for_log = None
                 try:
@@ -50,12 +45,9 @@ class LineMessagingAdapter:
                 except Exception:
                     self.logger.debug("reply payload: <unable to serialize>")
 
-                # Directly send the model/request object to the SDK
                 self.messaging_api.reply_message(reply_message_request)
                 return
             except Exception:
-                # As a last-resort safety net, attempt to serialize and build
-                # a ReplyMessageRequest via parse_obj and send that.
                 try:
                     from linebot.v3.messaging import models
 
@@ -65,11 +57,9 @@ class LineMessagingAdapter:
                     self.messaging_api.reply_message(sdk_req)
                     return
                 except Exception:
-                    # Give up and re-raise the original error to let caller handle
                     raise
         except Exception as e:
             self.logger.error(f"Error when calling messaging_api.reply_message: {e}")
-            # re-raise so caller (safe_reply_message) can react (e.g. fallback to push)
             raise
 
     def push_message(self, push_message_request):
@@ -79,10 +69,6 @@ class LineMessagingAdapter:
             )
             return
         try:
-            # Assume push_message is called with SDK model instances (PushMessageRequest
-            # or other SDK models). Send the model directly; try to log its dict
-            # representation first. If sending fails, attempt to parse into
-            # PushMessageRequest and resend as a fallback.
             try:
                 try:
                     self.logger.debug(f"push payload: {push_message_request.to_dict()}")
@@ -97,7 +83,6 @@ class LineMessagingAdapter:
                 self.messaging_api.push_message(push_message_request)
                 return
             except Exception:
-                # Fallback: try to build a PushMessageRequest from the object
                 try:
                     from linebot.v3.messaging import models
 
@@ -105,7 +90,6 @@ class LineMessagingAdapter:
                     self.messaging_api.push_message(sdk_req)
                     return
                 except Exception:
-                    # Re-raise the original exception to let caller handle it
                     raise
         except Exception as e:
             self.logger.error(f"Error when calling messaging_api.push_message: {e}")

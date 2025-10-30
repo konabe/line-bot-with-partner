@@ -24,7 +24,6 @@ def create_pokemon_zukan_button_template(info: Union[PokemonInfo, Mapping]):
     )
     zukan_no = info.zukan_no or 0
 
-    # zero-pad to 4 digits, e.g. 25 -> '0025'
     try:
         zukan_id_str = f"{int(zukan_no):04d}"
     except Exception:
@@ -34,8 +33,6 @@ def create_pokemon_zukan_button_template(info: Union[PokemonInfo, Mapping]):
 
     detail_url = f"https://zukan.pokemon.co.jp/detail/{zukan_id_str}"
 
-    # Build SDK model instances directly using the correct parameter names
-    # (camelCase) expected by the installed SDK.
     actions = [URIAction(label="図鑑で見る", uri=detail_url, altUri=None)]
 
     template = ButtonsTemplate(
