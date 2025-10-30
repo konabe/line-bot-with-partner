@@ -7,7 +7,7 @@ COPY requirements.txt ./
 # BuildKitのキャッシュ活用（uvはpip互換キャッシュを利用）
 RUN --mount=type=cache,target=/root/.cache/pip uv pip install -r requirements.txt --system
 COPY . .
-ENV PYTHONPATH=/app
+ENV PYTHONPATH=/app/src
 ENV PORT=8080
 COPY start.sh /start.sh
 RUN chmod +x /start.sh

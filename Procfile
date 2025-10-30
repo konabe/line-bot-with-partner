@@ -1,1 +1,1 @@
-web: bash start.sh
+web: PYTHONPATH=./src bash start.sh
