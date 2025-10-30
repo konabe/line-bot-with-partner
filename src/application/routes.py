@@ -9,7 +9,7 @@ from linebot.v3.webhook import WebhookHandler
 logger = logging.getLogger(__name__)
 
 
-def register_routes(app, handler: WebhookHandler, safe_reply_message):
+def register_routes(app, handler: WebhookHandler, line_adapter):
     @app.route("/health", methods=["GET"])
     def health():
         logger.debug("/health endpoint called")
@@ -25,16 +25,16 @@ def register_routes(app, handler: WebhookHandler, safe_reply_message):
             logger.debug("handler.handle succeeded")
         except InvalidSignatureError:
             logger.error("InvalidSignatureError: signature invalid")
-            _handle_signature_error(body, safe_reply_message)
+            _handle_signature_error(body, line_adapter)
             abort(400)
         except Exception as e:
             logger.error(f"Exception in handler.handle: {e}")
-            _handle_general_error(body, safe_reply_message)
+            _handle_general_error(body, line_adapter)
             abort(500)
         return "OK", 200
 
 
-def _handle_signature_error(body, safe_reply_message):
+def _handle_signature_error(body, line_adapter):
     """InvalidSignatureError を処理し、ユーザーにエラーメッセージを送信します。"""
     try:
         data = json.loads(body)
@@ -52,12 +52,12 @@ def _handle_signature_error(body, safe_reply_message):
                     ],
                     notificationDisabled=False,
                 )
-                safe_reply_message(reply_message_request)
+                line_adapter.reply_message(reply_message_request)
     except Exception as ex:
         logger.error(f"障害通知送信失敗: {ex}")
 
 
-def _handle_general_error(body, safe_reply_message):
+def _handle_general_error(body, line_adapter):
     """一般的な例外を処理し、ユーザーにエラーメッセージを送信します。"""
     try:
         data = json.loads(body)
@@ -75,6 +75,6 @@ def _handle_general_error(body, safe_reply_message):
                     ],
                     notificationDisabled=False,
                 )
-                safe_reply_message(reply_message_request)
+                line_adapter.reply_message(reply_message_request)
     except Exception as ex:
         logger.error(f"障害通知送信失敗: {ex}")
