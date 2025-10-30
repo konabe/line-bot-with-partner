@@ -1,4 +1,5 @@
 import logging
+from typing import Any, cast
 
 from .usecases.protocols import (
     LineAdapterProtocol,
@@ -65,10 +66,6 @@ class MessageHandler:
 
     def _handle_chatgpt(self, event, text: str) -> None:
         logger.info("コマンド以外のメッセージを受信: usecase に委譲")
-        # Inject adapter instances into the usecase
-        from typing import Any, cast
-
-        # cast to Any to satisfy the protocol typing in the usecase
         SendChatResponseUsecase(
             cast(Any, self.line_adapter), cast(Any, self.openai_adapter)
         ).execute(event, text)
