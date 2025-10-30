@@ -13,7 +13,9 @@ from .routes import register_routes
 logger = logging.getLogger(__name__)
 
 
-def register_handlers(app, handler: WebhookHandler, safe_reply_message):
+def register_handlers(
+    app, handler: WebhookHandler, safe_reply_message, line_adapter=None
+):
     # ルートを登録
     register_routes(app, handler, safe_reply_message)
 
@@ -30,8 +32,8 @@ def register_handlers(app, handler: WebhookHandler, safe_reply_message):
             _openai_holder["client"] = OpenAIAdapter()
         return _openai_holder["client"]
 
-    # Create a Line adapter instance to be injected into handlers/usecases
-    _line_adapter = LineMessagingAdapter(logger=create_logger(__name__))
+    # Use the provided line_adapter or create a new one
+    _line_adapter = line_adapter or LineMessagingAdapter(logger=create_logger(__name__))
 
     message_handler_instance = MessageHandler(
         _line_adapter, _get_openai_client(), _weather_adapter
