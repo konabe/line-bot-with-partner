@@ -33,20 +33,47 @@ class MessageRouter:
         self.logger = logger or create_logger(__name__)
         self.janken_service = janken_service or JankenGameMasterService()
 
-    def route_message(self, event, message=None) -> None:
-        # Accept an optional parsed message argument that some webhook
-        # handler invocations may provide. Prefer `message.text` when
-        # available, otherwise fall back to `event.message.text`.
+    def route_message(self, *args, **kwargs) -> None:
+        # Be permissive about the handler calling convention.
+        # The webhook library may call the handler with any of:
+        #  - (event)
+        #  - (event, message)
+        #  - (message)
+        # Accept *args and try to infer which object is the event vs parsed message.
+        event = kwargs.get("event")
+        message = kwargs.get("message")
+
+        if len(args) == 1:
+            candidate = args[0]
+            # If it looks like an event (has replyToken or source), treat it as event
+            if (
+                hasattr(candidate, "reply_token")
+                or hasattr(candidate, "replyToken")
+                or hasattr(candidate, "source")
+            ):
+                event = candidate
+            else:
+                message = candidate
+        elif len(args) >= 2:
+            event = args[0]
+            message = args[1]
+
+        if event is None:
+            logger.error(
+                "route_message called but no event object could be inferred; skipping"
+            )
+            return
+
+        # Determine text: prefer message.text when available
         if message is not None and hasattr(message, "text"):
             text = message.text
         else:
-            # Defensive: event.message may not always be present in mocked
-            # contexts, so use getattr with fallback.
             text = getattr(getattr(event, "message", None), "text", "")
 
         logger.debug(f"route_message called. text: {text}")
 
         t = (text or "").strip()
+
         if "天気" in text:
             return self._route_weather(event, text)
         if t == "じゃんけん":
