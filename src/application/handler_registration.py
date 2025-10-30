@@ -7,6 +7,7 @@ from linebot.v3.webhooks.models.text_message_content import TextMessageContent
 
 from ..infrastructure.logger import create_logger
 from .message_router import MessageRouter
+from .postback_router import PostbackRouter
 from .routes import register_routes
 from .usecases.send_startup_notification_usecase import SendStartupNotificationUsecase
 
@@ -50,8 +51,14 @@ def register_handlers(
         return message_router_instance.route_message(event)
 
     # MessageRouter はメッセージとポストバックの両方をルーティングする
+    postback_router_instance = PostbackRouter(
+        _line_adapter,
+        logger=create_logger(__name__),
+        janken_service=message_router_instance.janken_service,
+    )
+
     def postback_handler(event):
-        return message_router_instance.route_postback(event)
+        return postback_router_instance.route_postback(event)
 
     handler.add(MessageEvent, message=TextMessageContent)(message_handler)
     handler.add(PostbackEvent)(postback_handler)

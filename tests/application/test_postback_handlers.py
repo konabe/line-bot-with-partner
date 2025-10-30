@@ -41,7 +41,7 @@ def _make_event(data):
 
 def test_handle_postback_success(monkeypatch):
     """ポストバックでじゃんけんが正常に処理され、reply が送信されること"""
-    from src.application.message_router import MessageRouter
+    from src.application.postback_router import PostbackRouter
 
     # prepare fake service to return deterministic result
     class FakeService:
@@ -78,15 +78,12 @@ def test_handle_postback_success(monkeypatch):
             pass
 
     # MessageRouterではNoneでも問題ない（postbackでは使用しない）
-    router = MessageRouter(
+    router = PostbackRouter(
         FakeLineAdapter(fake_safe_reply),
-        None,
-        None,
-        None,  # type: ignore
         logger=_FakeLogger(),
         janken_service=FakeService(),  # type: ignore
     )
-    router.route_postback(event)  # type: ignore
+    router.route_postback(event)
 
     assert len(sent) == 1
     req = sent[0]
@@ -102,7 +99,7 @@ def test_handle_postback_success(monkeypatch):
 
 def test_handle_postback_invalid_hand(monkeypatch):
     """無効な手の場合、エラーメッセージが reply されること"""
-    from src.application.message_router import MessageRouter
+    from src.application.postback_router import PostbackRouter
 
     # fake service that returns an error reply for invalid hand
     class FakeServiceErr:
@@ -132,15 +129,12 @@ def test_handle_postback_invalid_hand(monkeypatch):
         def exception(self, msg):
             pass
 
-    router = MessageRouter(
+    router = PostbackRouter(
         FakeLineAdapter(fake_safe_reply),
-        None,
-        None,
-        None,  # type: ignore
         logger=_FakeLogger(),
         janken_service=FakeServiceErr(),  # type: ignore
     )
-    router.route_postback(event)  # type: ignore
+    router.route_postback(event)
 
     assert len(sent) == 1
     req = sent[0]
@@ -155,7 +149,7 @@ def test_handle_postback_invalid_hand(monkeypatch):
 
 def test_handle_postback_non_janken(monkeypatch):
     """janken: で始まらないデータでは何も送信されないこと"""
-    from src.application.message_router import MessageRouter
+    from src.application.postback_router import PostbackRouter
 
     # Ensure fake service would not be instantiated for non-janken postback
     class FakeService:
@@ -191,15 +185,12 @@ def test_handle_postback_non_janken(monkeypatch):
             pass
 
     # Pass a fake service instance but it should not be used
-    router = MessageRouter(
+    router = PostbackRouter(
         FakeLineAdapter(fake_safe_reply),
-        None,
-        None,
-        None,  # type: ignore
         logger=_FakeLogger(),
         janken_service=FakeService(),  # type: ignore
     )
-    router.route_postback(event)  # type: ignore
+    router.route_postback(event)
 
     # Should not have called safe_reply_message nor instantiated service beyond construction
     assert sent == []

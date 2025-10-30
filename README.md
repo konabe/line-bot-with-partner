@@ -163,6 +163,33 @@ src/
 └── ports/                    # ポート定義
 ```
 
+### 設計メモ: ポストバックルーティングの責務分離
+
+このリポジトリではメッセージイベントとポストバックイベントのルーティング責務を分離しています。
+
+- `src/application/message_router.py` はテキストメッセージのルーティングに専念します。
+- ポストバックイベント（例: ボタンの押下で送られる `postback.data`）は `src/application/postback_router.py` の `PostbackRouter` が扱います。
+
+handler の登録は `src/application/handler_registration.py` で行われており、MessageEvent は `MessageRouter`、PostbackEvent は `PostbackRouter` に振り分けられます。
+
+今回の設計変更により、ポストバック処理の拡張やテストがより容易になります。外部から直接 `MessageRouter.route_postback` を呼んでいるコードがある場合は、`PostbackRouter.route_postback` に差し替えてください。
+
+短い移行手順:
+
+1. `MessageRouter.route_postback(...)` を使っている箇所を検索します。
+2. `PostbackRouter` を初期化して `route_postback(...)` を呼ぶように置換します。
+3. 既存のユニットテストは `tests/application/test_postback_handlers.py` を参考に更新してください。
+
+例:
+
+```py
+# 旧: message_router_instance.route_postback(event)
+# 新:
+postback_router = PostbackRouter(line_adapter, logger=logger, janken_service=service)
+postback_router.route_postback(event)
+```
+
+
 ### テスト実行
 
 ```bash
