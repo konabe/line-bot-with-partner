@@ -4,7 +4,6 @@ from typing import Any, Optional
 from linebot.v3.webhook import WebhookHandler
 from linebot.v3.webhooks.models.message_event import MessageEvent
 from linebot.v3.webhooks.models.postback_event import PostbackEvent
-from linebot.v3.webhooks.models.text_message_content import TextMessageContent
 
 from src.application.routes.message_router import MessageRouter
 from src.application.routes.postback_router import PostbackRouter
@@ -61,7 +60,10 @@ def bind_routes(
     )
 
     # ハンドラ登録 — bound method を直接渡して簡潔にする
-    handler.add(MessageEvent, message=TextMessageContent)(
-        message_router_instance.route_message
-    )
+    # Register message handler without passing the parsed `message` argument.
+    # Passing `message=TextMessageContent` causes the webhook library to call
+    # the handler with (event, message), which results in three positional
+    # arguments for instance methods (self, event, message). To keep the
+    # callback signature stable, register without the extra message arg.
+    handler.add(MessageEvent)(message_router_instance.route_message)
     handler.add(PostbackEvent)(postback_router_instance.route_postback)
