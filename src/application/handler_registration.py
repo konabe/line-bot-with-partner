@@ -6,9 +6,9 @@ from linebot.v3.webhooks.models.postback_event import PostbackEvent
 from linebot.v3.webhooks.models.text_message_content import TextMessageContent
 
 from ..infrastructure.logger import create_logger
-from .message_router import MessageRouter
-from .postback_router import PostbackRouter
 from .register_flask_routes import register_routes
+from .routes.message_router import MessageRouter
+from .routes.postback_router import PostbackRouter
 from .usecases.send_startup_notification_usecase import SendStartupNotificationUsecase
 
 logger = logging.getLogger(__name__)

@@ -167,8 +167,8 @@ src/
 
 このリポジトリではメッセージイベントとポストバックイベントのルーティング責務を分離しています。
 
-- `src/application/message_router.py` はテキストメッセージのルーティングに専念します。
-- ポストバックイベント（例: ボタンの押下で送られる `postback.data`）は `src/application/postback_router.py` の `PostbackRouter` が扱います。
+- `src/application/routes/message_router.py` はテキストメッセージのルーティングに専念します。
+- ポストバックイベント（例: ボタンの押下で送られる `postback.data`）は `src/application/routes/postback_router.py` の `PostbackRouter` が扱います。
 
 handler の登録は `src/application/handler_registration.py` で行われており、MessageEvent は `MessageRouter`、PostbackEvent は `PostbackRouter` に振り分けられます。
 
