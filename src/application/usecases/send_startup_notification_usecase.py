@@ -1,6 +1,5 @@
-"""起動通知送信のユースケース"""
-
 import os
+from typing import Optional
 
 from linebot.v3.messaging.models import PushMessageRequest, TextMessage
 
@@ -9,7 +8,9 @@ from .protocols import LineAdapterProtocol
 
 
 class SendStartupNotificationUsecase:
-    def __init__(self, line_adapter: LineAdapterProtocol, logger: Logger = None):
+    def __init__(
+        self, line_adapter: LineAdapterProtocol, logger: Optional[Logger] = None
+    ):
         self.line_adapter = line_adapter
         self.logger = logger or create_logger(__name__)
 

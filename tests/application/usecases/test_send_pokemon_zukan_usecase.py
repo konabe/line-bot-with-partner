@@ -15,6 +15,14 @@ def test_send_pokemon_zukan_success():
         def reply_message(self, req):
             fake_reply(req)
 
+        def push_message(self, req):
+            # テスト内では使用しないがプロトコル準拠のために実装
+            return True
+
+        def get_display_name_from_line_profile(self, user_id):
+            # テストでは不要なので None を返す
+            return None
+
     class FakePokemonAdapter:
         def get_random_pokemon_info(self):
             return PokemonInfo(
@@ -47,6 +55,14 @@ def test_send_pokemon_zukan_failure():
     class FakeLineAdapter:
         def reply_message(self, req):
             fake_reply(req)
+
+        def push_message(self, req):
+            # テスト内では使用しないがプロトコル準拠のために実装
+            return True
+
+        def get_display_name_from_line_profile(self, user_id):
+            # テストでは不要なので None を返す
+            return None
 
     class FakePokemonAdapter:
         def get_random_pokemon_info(self):
