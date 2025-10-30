@@ -7,7 +7,6 @@ from linebot.v3.webhooks.models.text_message_content import TextMessageContent
 
 from ..infrastructure.logger import create_logger
 from .message_router import MessageRouter
-from .postback_handlers import PostbackHandler
 from .routes import register_routes
 from .usecases.send_startup_notification_usecase import SendStartupNotificationUsecase
 
@@ -40,22 +39,19 @@ def register_handlers(
         return _openai_holder["client"]
 
     message_router_instance = MessageRouter(
-        _line_adapter, _get_openai_client(), _weather_adapter, _pokemon_adapter
+        _line_adapter,
+        _get_openai_client(),
+        _weather_adapter,
+        _pokemon_adapter,
+        logger=create_logger(__name__),
     )
 
     def message_handler(event):
         return message_router_instance.route_message(event)
 
-    # Instantiate PostbackHandler with injected logger and safe_reply_message
-    # profile_getter is implemented in the infrastructure layer
-    # Reuse the same LineMessagingAdapter for postback profile lookups
-    _postback_handler_instance = PostbackHandler(
-        create_logger(__name__),
-        _line_adapter,
-    )
-
+    # MessageRouter はメッセージとポストバックの両方をルーティングする
     def postback_handler(event):
-        return _postback_handler_instance.handle_postback(event)
+        return message_router_instance.route_postback(event)
 
     handler.add(MessageEvent, message=TextMessageContent)(message_handler)
     handler.add(PostbackEvent)(postback_handler)
