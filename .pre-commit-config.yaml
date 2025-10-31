@@ -16,6 +16,13 @@ repos:
     hooks:
       - id: flake8
 
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: ["--select", "PLC0415"]
+        files: ^src/
+
   - repo: https://github.com/RobertCraigie/pyright-python
     rev: v1.1.390
     hooks:
