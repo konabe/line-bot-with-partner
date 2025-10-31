@@ -126,6 +126,10 @@ class OpenAIAdapter:
             self.logger.debug("PromptLayer disabled, skipping prompt tracking")
             return False
 
+        # prompt_input_variablesは必須でdictである必要がある
+        if prompt_input_variables is None:
+            prompt_input_variables = {}
+
         try:
             # PromptLayerのboundメソッドは (request_id, prompt_name, prompt_input_variables, version=None, label=None)
             # キーワード引数の受け取り方が内部で変わるバージョン差異があるため、明示的に順序付き引数で呼ぶ。
@@ -155,18 +159,18 @@ class OpenAIAdapter:
                 )
                 try:
                     # aprompt(api_key, base_url, throw_on_error, request_id, ...)
-                    asyncio.run(
-                        promptlayer_track.aprompt(
-                            self.promptlayer_client.api_key,
-                            self.promptlayer_client.base_url,
-                            self.promptlayer_client.throw_on_error,
-                            request_id,
-                            prompt_name,
-                            prompt_input_variables,
-                            version,
-                            None,
-                        )
-                    )
+                    # オプショナル引数はNoneではなく省略する必要がある
+                    args = [
+                        self.promptlayer_client.api_key,
+                        self.promptlayer_client.base_url,
+                        self.promptlayer_client.throw_on_error,
+                        request_id,
+                        prompt_name,
+                        prompt_input_variables,
+                    ]
+                    if version is not None:
+                        args.append(version)
+                    asyncio.run(promptlayer_track.aprompt(*args))
                 except Exception as e:
                     # 最後に失敗したら警告を出してFalseを返す
                     self.logger.warning(
