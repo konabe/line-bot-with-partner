@@ -30,12 +30,13 @@ class OpenAIAdapter:
         self.promptlayer_api_key = os.environ.get("PROMPTLAYER_API_KEY")
         if self.promptlayer_api_key:
             # PromptLayerでラップされたOpenAIクライアントを使用
-            promptlayer_client = PromptLayer(api_key=self.promptlayer_api_key)
-            OpenAIWithPL = promptlayer_client.openai.OpenAI
+            self.promptlayer_client = PromptLayer(api_key=self.promptlayer_api_key)
+            OpenAIWithPL = self.promptlayer_client.openai.OpenAI
             self.openai_client: Any = OpenAIWithPL(api_key=self.api_key)
             self.logger.info("PromptLayer enabled with OpenAI SDK wrapper")
         else:
             # 通常のOpenAIクライアントを使用
+            self.promptlayer_client = None
             self.openai_client: Any = OpenAI(api_key=self.api_key)
             self.logger.info("PromptLayer disabled (PROMPTLAYER_API_KEY not set)")
 
@@ -70,22 +71,25 @@ class OpenAIAdapter:
                 "model": self.model,
                 "messages": messages,
                 "max_completion_tokens": 3000,
-                "return_pl_id": return_pl_id,
             }
 
             # PromptLayerを使用している場合のみpl_tagsを追加
             if self.promptlayer_api_key and pl_tags:
                 kwargs["pl_tags"] = pl_tags
 
+            # return_pl_idを追加
+            if return_pl_id:
+                kwargs["return_pl_id"] = True
+
             response = self.openai_client.chat.completions.create(**kwargs)
 
-            # return_pl_id=Trueの場合、responseはタプル
+            # return_pl_id=Trueの場合、responseはタプル (response, pl_id)
             if return_pl_id and isinstance(response, tuple):
-                actual_response, pl_request_id = response
+                actual_response, pl_id = response
                 content = actual_response.choices[0].message.content
                 if not content:
                     raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
-                return content.strip(), pl_request_id
+                return content.strip(), pl_id
             else:
                 content = response.choices[0].message.content
                 if not content:
@@ -98,30 +102,75 @@ class OpenAIAdapter:
             self.logger.error(f"OpenAI API error: {e}")
             raise OpenAIError(f"OpenAI API error: {str(e)}") from e
 
+    def track_prompt(
+        self,
+        request_id: int,
+        prompt_name: str,
+        prompt_input_variables: Optional[dict] = None,
+        version: Optional[int] = None,
+    ) -> bool:
+        """PromptLayerにプロンプトをトラッキングする
+
+        Args:
+            request_id: PromptLayerのリクエストID
+            prompt_name: プロンプト名
+            prompt_input_variables: プロンプトの入力変数
+            version: プロンプトのバージョン
+
+        Returns:
+            送信成功の場合True、PromptLayer無効時やエラー時False
+        """
+        if not self.promptlayer_client:
+            self.logger.debug("PromptLayer disabled, skipping prompt tracking")
+            return False
+
+        try:
+            kwargs = {
+                "request_id": request_id,
+                "prompt_name": prompt_name,
+            }
+            if prompt_input_variables is not None:
+                kwargs["prompt_input_variables"] = prompt_input_variables
+            if version is not None:
+                kwargs["version"] = version
+
+            self.promptlayer_client.track.prompt(**kwargs)
+            self.logger.info(
+                f"Successfully tracked prompt: {prompt_name} (version={version}) for request_id={request_id}"
+            )
+            return True
+        except Exception as e:
+            self.logger.warning(f"Failed to track prompt to PromptLayer: {e}")
+            return False
+
     def track_score(
-        self, pl_request_id: int, score: int, score_name: str = "user_feedback"
+        self,
+        request_id: int,
+        score: int,
+        score_name: str = "user_feedback",
     ) -> bool:
         """PromptLayerにスコアを送信する
 
         Args:
-            pl_request_id: PromptLayerのリクエストID
+            request_id: PromptLayerのリクエストID
             score: スコア値（通常0-100）
             score_name: スコアの名前
 
         Returns:
             送信成功の場合True、PromptLayer無効時やエラー時False
         """
-        if not self.promptlayer_api_key:
+        if not self.promptlayer_client:
             self.logger.debug("PromptLayer disabled, skipping score tracking")
             return False
 
         try:
-            promptlayer_client = PromptLayer(api_key=self.promptlayer_api_key)
-            promptlayer_client.track.score(
-                request_id=pl_request_id, score=score, score_name=score_name
+            self.promptlayer_client.track.score(
+                request_id=request_id,
+                score=score,
+                score_name=score_name,
             )
             self.logger.info(
-                f"Successfully tracked score: {score_name}={score} for request_id={pl_request_id}"
+                f"Successfully tracked score: {score_name}={score} for request_id={request_id}"
             )
             return True
         except Exception as e:
@@ -138,7 +187,9 @@ class OpenAIAdapter:
         )
         messages = [{"role": "user", "content": prompt}]
         result = self._call_openai_api(messages, pl_tags=["meal_suggestion"])
-        return result if isinstance(result, str) else result[0]
+        # return_pl_id=Falseの場合は必ずstrが返る
+        assert isinstance(result, str)
+        return result
 
     def get_chatgpt_response(self, user_message: str) -> str:
         system_prompt = (
@@ -151,4 +202,6 @@ class OpenAIAdapter:
             {"role": "user", "content": user_message},
         ]
         result = self._call_openai_api(messages, pl_tags=["chat_response"])
-        return result if isinstance(result, str) else result[0]
+        # return_pl_id=Falseの場合は必ずstrが返る
+        assert isinstance(result, str)
+        return result
