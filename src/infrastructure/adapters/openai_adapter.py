@@ -1,6 +1,7 @@
 import datetime
 import json
 import os
+import time
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -34,49 +35,57 @@ class OpenAIAdapter:
 
         # PromptLayerの設定
         self.promptlayer_api_key = os.environ.get("PROMPTLAYER_API_KEY")
-        if self.promptlayer_api_key and promptlayer:
-            self.promptlayer_client = promptlayer.PromptLayer(
-                api_key=self.promptlayer_api_key
-            )
+        if self.promptlayer_api_key:
             self.use_promptlayer = True
             self.logger.info("PromptLayer enabled")
         else:
-            self.promptlayer_client = None
             self.use_promptlayer = False
-            if self.promptlayer_api_key and not promptlayer:
-                self.logger.warning(
-                    "promptlayer package not installed, disabling PromptLayer"
-                )
-            else:
-                self.logger.info("PromptLayer disabled (PROMPTLAYER_API_KEY not set)")
+            self.logger.info("PromptLayer disabled (PROMPTLAYER_API_KEY not set)")
 
     def _log_to_promptlayer(
-        self, request_payload: dict, response_data: dict, pl_tags: list[str]
+        self,
+        request_payload: dict,
+        response_data: dict,
+        pl_tags: list[str],
+        request_start_time: float,
+        request_end_time: float,
     ) -> None:
-        """PromptLayerにログを送信"""
+        """PromptLayerにログを送信（REST API経由）"""
         if not self.use_promptlayer:
             return
 
         try:
+            # PromptLayer REST APIにログを送信
             pl_request = {
-                "function_name": "openai.ChatCompletion.create",
+                "function_name": "openai.chat.completions.create",
+                "provider_type": "openai",
+                "args": [],
                 "kwargs": request_payload,
                 "tags": pl_tags,
                 "request_response": response_data,
-                "request_start_time": datetime.datetime.now(
-                    ZoneInfo("UTC")
-                ).timestamp(),
-                "request_end_time": datetime.datetime.now(ZoneInfo("UTC")).timestamp(),
+                "request_start_time": request_start_time,
+                "request_end_time": request_end_time,
+                "api_key": self.promptlayer_api_key,
             }
 
-            pl_headers = {"X-API-KEY": self.promptlayer_api_key}
+            self.logger.debug(
+                f"Sending log to PromptLayer: {json.dumps(pl_request, ensure_ascii=False, default=str)}"
+            )
 
-            requests.post(
-                "https://api.promptlayer.com/track-request",
+            response = requests.post(
+                "https://api.promptlayer.com/rest/track-request",
                 json=pl_request,
-                headers=pl_headers,
                 timeout=5,
             )
+
+            if response.status_code == 200:
+                self.logger.debug(
+                    f"Successfully logged to PromptLayer with tags: {pl_tags}"
+                )
+            else:
+                self.logger.warning(
+                    f"PromptLayer returned status {response.status_code}: {response.text}"
+                )
         except Exception as e:
             self.logger.warning(f"Failed to log to PromptLayer: {e}")
 
@@ -84,6 +93,8 @@ class OpenAIAdapter:
         self, messages: list, pl_tags: Optional[list[str]] = None
     ) -> str:
         """OpenAI APIを呼び出す（PromptLayer対応）"""
+        request_start_time = time.time()
+
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -108,6 +119,8 @@ class OpenAIAdapter:
                 headers=headers,
                 timeout=30,
             )
+            request_end_time = time.time()
+
             if resp.status_code >= 400:
                 body = resp.text or ""
                 if len(body) > 2000:
@@ -127,7 +140,9 @@ class OpenAIAdapter:
                 raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
 
             # PromptLayerにログを送信
-            self._log_to_promptlayer(payload, data, pl_tags or [])
+            self._log_to_promptlayer(
+                payload, data, pl_tags or [], request_start_time, request_end_time
+            )
 
             return content.strip()
         except Exception as e:
