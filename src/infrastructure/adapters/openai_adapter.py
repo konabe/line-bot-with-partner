@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import os
@@ -6,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 from openai import OpenAI
 from promptlayer import PromptLayer
+from promptlayer import track as promptlayer_track
 
 from ..logger import Logger, create_logger
 
@@ -125,16 +127,52 @@ class OpenAIAdapter:
             return False
 
         try:
-            kwargs = {
-                "request_id": request_id,
-                "prompt_name": prompt_name,
-            }
-            if prompt_input_variables is not None:
-                kwargs["prompt_input_variables"] = prompt_input_variables
+            # PromptLayerのboundメソッドは (request_id, prompt_name, prompt_input_variables, version=None, label=None)
+            # キーワード引数の受け取り方が内部で変わるバージョン差異があるため、明示的に順序付き引数で呼ぶ。
+            request_args = [
+                request_id,
+                prompt_name,
+                prompt_input_variables,
+            ]
+            # version と label はオプショナル
             if version is not None:
-                kwargs["version"] = version
+                request_args.append(version)
+            else:
+                request_args.append(None)
 
-            self.promptlayer_client.track.prompt(**kwargs)
+            # label は今回使用しない
+            request_args.append(None)
+
+            # 呼び出し（bound method を想定して順序引数で渡す）
+            try:
+                self.promptlayer_client.track.prompt(*request_args)
+            except TypeError as te:
+                # 最新のPromptLayer SDKでモジュールレベルの prompt 実装にバグがあり
+                # 内部で誤った引数を渡して TypeError が発生することが確認されている。
+                # その場合は非同期版の aprompt を直接呼び出してワークアラウンドする。
+                self.logger.warning(
+                    f"PromptLayer track.prompt TypeError, falling back to aprompt: {te}"
+                )
+                try:
+                    # aprompt(api_key, base_url, throw_on_error, request_id, ...)
+                    asyncio.run(
+                        promptlayer_track.aprompt(
+                            self.promptlayer_client.api_key,
+                            self.promptlayer_client.base_url,
+                            self.promptlayer_client.throw_on_error,
+                            request_id,
+                            prompt_name,
+                            prompt_input_variables,
+                            version,
+                            None,
+                        )
+                    )
+                except Exception as e:
+                    # 最後に失敗したら警告を出してFalseを返す
+                    self.logger.warning(
+                        f"Failed to track prompt to PromptLayer (aprompt): {e}"
+                    )
+                    return False
             self.logger.info(
                 f"Successfully tracked prompt: {prompt_name} (version={version}) for request_id={request_id}"
             )
@@ -164,11 +202,16 @@ class OpenAIAdapter:
             return False
 
         try:
-            self.promptlayer_client.track.score(
-                request_id=request_id,
-                score=score,
-                score_name=score_name,
-            )
+            try:
+                # bound method signature: (request_id, score, score_name=None)
+                self.promptlayer_client.track.score(request_id, score, score_name)
+            except TypeError:
+                # fallback to keyword form if some SDK versions require it
+                self.promptlayer_client.track.score(
+                    request_id=request_id,
+                    score=score,
+                    score_name=score_name,
+                )
             self.logger.info(
                 f"Successfully tracked score: {score_name}={score} for request_id={request_id}"
             )
