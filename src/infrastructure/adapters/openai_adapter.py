@@ -40,9 +40,22 @@ class OpenAIAdapter:
             self.logger.info("PromptLayer disabled (PROMPTLAYER_API_KEY not set)")
 
     def _call_openai_api(
-        self, messages: list, pl_tags: Optional[list[str]] = None
-    ) -> str:
-        """OpenAI SDK + PromptLayerを使ってAPIを呼び出す"""
+        self,
+        messages: list,
+        pl_tags: Optional[list[str]] = None,
+        return_pl_id: bool = False,
+    ) -> str | tuple[str, Optional[int]]:
+        """OpenAI SDK + PromptLayerを使ってAPIを呼び出す
+
+        Args:
+            messages: OpenAIに送信するメッセージ
+            pl_tags: PromptLayerのタグ
+            return_pl_id: PromptLayerのリクエストIDを返すかどうか
+
+        Returns:
+            return_pl_id=False: レスポンステキスト
+            return_pl_id=True: (レスポンステキスト, PromptLayerリクエストID)
+        """
         try:
             self.logger.debug(
                 f"OpenAI request: model={self.model}, messages={json.dumps(messages, ensure_ascii=False)}"
@@ -57,6 +70,7 @@ class OpenAIAdapter:
                 "model": self.model,
                 "messages": messages,
                 "max_completion_tokens": 3000,
+                "return_pl_id": return_pl_id,
             }
 
             # PromptLayerを使用している場合のみpl_tagsを追加
@@ -64,19 +78,57 @@ class OpenAIAdapter:
                 kwargs["pl_tags"] = pl_tags
 
             response = self.openai_client.chat.completions.create(**kwargs)
-            content = response.choices[0].message.content
 
-            if not content:
-                raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
+            # return_pl_id=Trueの場合、responseはタプル
+            if return_pl_id and isinstance(response, tuple):
+                actual_response, pl_request_id = response
+                content = actual_response.choices[0].message.content
+                if not content:
+                    raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
+                return content.strip(), pl_request_id
+            else:
+                content = response.choices[0].message.content
+                if not content:
+                    raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
+                return content.strip()
 
-            return content.strip()
         except OpenAIError:
             raise
         except Exception as e:
             self.logger.error(f"OpenAI API error: {e}")
             raise OpenAIError(f"OpenAI API error: {str(e)}") from e
 
-    def get_chatgpt_meal_suggestion(self):
+    def track_score(
+        self, pl_request_id: int, score: int, score_name: str = "user_feedback"
+    ) -> bool:
+        """PromptLayerにスコアを送信する
+
+        Args:
+            pl_request_id: PromptLayerのリクエストID
+            score: スコア値（通常0-100）
+            score_name: スコアの名前
+
+        Returns:
+            送信成功の場合True、PromptLayer無効時やエラー時False
+        """
+        if not self.promptlayer_api_key:
+            self.logger.debug("PromptLayer disabled, skipping score tracking")
+            return False
+
+        try:
+            promptlayer_client = PromptLayer(api_key=self.promptlayer_api_key)
+            promptlayer_client.track.score(
+                request_id=pl_request_id, score=score, score_name=score_name
+            )
+            self.logger.info(
+                f"Successfully tracked score: {score_name}={score} for request_id={pl_request_id}"
+            )
+            return True
+        except Exception as e:
+            self.logger.warning(f"Failed to track score to PromptLayer: {e}")
+            return False
+
+    def get_chatgpt_meal_suggestion(self) -> str:
         now = datetime.datetime.now(ZoneInfo("Asia/Tokyo"))
         now_str = now.strftime("%Y-%m-%d %H:%M")
         prompt = (
@@ -85,7 +137,8 @@ class OpenAIAdapter:
             "簡単なレシピや調理時間（目安）と一言コメント付きで提案してください。日本語で答えてください。"
         )
         messages = [{"role": "user", "content": prompt}]
-        return self._call_openai_api(messages, pl_tags=["meal_suggestion"])
+        result = self._call_openai_api(messages, pl_tags=["meal_suggestion"])
+        return result if isinstance(result, str) else result[0]
 
     def get_chatgpt_response(self, user_message: str) -> str:
         system_prompt = (
@@ -97,4 +150,5 @@ class OpenAIAdapter:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ]
-        return self._call_openai_api(messages, pl_tags=["chat_response"])
+        result = self._call_openai_api(messages, pl_tags=["chat_response"])
+        return result if isinstance(result, str) else result[0]
