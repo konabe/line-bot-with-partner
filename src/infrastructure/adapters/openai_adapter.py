@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import json
 import os
@@ -7,7 +6,6 @@ from zoneinfo import ZoneInfo
 
 from openai import OpenAI
 from promptlayer import PromptLayer
-from promptlayer import track as promptlayer_track
 
 from ..logger import Logger, create_logger
 
@@ -131,52 +129,10 @@ class OpenAIAdapter:
             prompt_input_variables = {}
 
         try:
-            # PromptLayerのboundメソッドは (request_id, prompt_name, prompt_input_variables, version=None, label=None)
-            # キーワード引数の受け取り方が内部で変わるバージョン差異があるため、明示的に順序付き引数で呼ぶ。
-            request_args = [
-                request_id,
-                prompt_name,
-                prompt_input_variables,
-            ]
-            # version と label はオプショナル
-            if version is not None:
-                request_args.append(version)
-            else:
-                request_args.append(None)
-
-            # label は今回使用しない
-            request_args.append(None)
-
-            # 呼び出し（bound method を想定して順序引数で渡す）
-            try:
-                self.promptlayer_client.track.prompt(*request_args)
-            except TypeError as te:
-                # 最新のPromptLayer SDKでモジュールレベルの prompt 実装にバグがあり
-                # 内部で誤った引数を渡して TypeError が発生することが確認されている。
-                # その場合は非同期版の aprompt を直接呼び出してワークアラウンドする。
-                self.logger.warning(
-                    f"PromptLayer track.prompt TypeError, falling back to aprompt: {te}"
-                )
-                try:
-                    # aprompt(api_key, base_url, throw_on_error, request_id, ...)
-                    # オプショナル引数はNoneではなく省略する必要がある
-                    args = [
-                        self.promptlayer_client.api_key,
-                        self.promptlayer_client.base_url,
-                        self.promptlayer_client.throw_on_error,
-                        request_id,
-                        prompt_name,
-                        prompt_input_variables,
-                    ]
-                    if version is not None:
-                        args.append(version)
-                    asyncio.run(promptlayer_track.aprompt(*args))
-                except Exception as e:
-                    # 最後に失敗したら警告を出してFalseを返す
-                    self.logger.warning(
-                        f"Failed to track prompt to PromptLayer (aprompt): {e}"
-                    )
-                    return False
+            # v1.0.71以前のPromptLayer SDKを使用（v1.0.72+にはバグがある）
+            self.promptlayer_client.track.prompt(
+                request_id, prompt_name, prompt_input_variables, version
+            )
             self.logger.info(
                 f"Successfully tracked prompt: {prompt_name} (version={version}) for request_id={request_id}"
             )
