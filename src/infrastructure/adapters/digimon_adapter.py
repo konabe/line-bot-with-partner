@@ -6,12 +6,12 @@ from typing import Optional
 import requests
 
 from ...domain.models.digimon_info import DigimonInfo
-from ..logger import create_logger
+from ..logger import Logger
 
 
 class DigimonApiAdapter:
-    def __init__(self, logger=None):
-        self.logger = logger or create_logger(__name__)
+    def __init__(self, logger: Logger):
+        self.logger = logger
 
     def get_random_digimon_info(self) -> Optional[DigimonInfo]:
         try:

@@ -39,7 +39,7 @@ def bind_routes(
     _openai_holder: dict = {"client": None}
     _weather_adapter = WeatherAdapter()
     _pokemon_adapter = PokemonApiAdapter()
-    _digimon_adapter = DigimonApiAdapter()
+    _digimon_adapter = DigimonApiAdapter(logger=adapter_logger)
 
     def _get_openai_client():
         if _openai_holder["client"] is None:

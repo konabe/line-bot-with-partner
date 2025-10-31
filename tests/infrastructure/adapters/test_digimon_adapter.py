@@ -2,11 +2,18 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from src.domain.models.digimon_info import DigimonInfo
 from src.infrastructure.adapters.digimon_adapter import DigimonApiAdapter
 
 
 class TestDigimonApiAdapter:
+    def test_init_without_logger_raises_error(self):
+        """loggerなしでインスタンス化するとTypeErrorが発生すること"""
+        with pytest.raises(TypeError):
+            DigimonApiAdapter()  # type: ignore
+
     @patch("src.infrastructure.adapters.digimon_adapter.requests.get")
     @patch("src.infrastructure.adapters.digimon_adapter.random.randint")
     def test_get_random_digimon_info_success(self, mock_randint, mock_get):
@@ -21,7 +28,8 @@ class TestDigimonApiAdapter:
         }
         mock_get.return_value = mock_response
 
-        adapter = DigimonApiAdapter()
+        mock_logger = MagicMock()
+        adapter = DigimonApiAdapter(logger=mock_logger)
         info = adapter.get_random_digimon_info()
 
         assert isinstance(info, DigimonInfo)
@@ -41,7 +49,8 @@ class TestDigimonApiAdapter:
         mock_randint.return_value = 1
         mock_get.side_effect = Exception("Network error")
 
-        adapter = DigimonApiAdapter()
+        mock_logger = MagicMock()
+        adapter = DigimonApiAdapter(logger=mock_logger)
         info = adapter.get_random_digimon_info()
 
         assert info is None
@@ -55,7 +64,8 @@ class TestDigimonApiAdapter:
         mock_response.json.side_effect = ValueError("Invalid JSON")
         mock_get.return_value = mock_response
 
-        adapter = DigimonApiAdapter()
+        mock_logger = MagicMock()
+        adapter = DigimonApiAdapter(logger=mock_logger)
         info = adapter.get_random_digimon_info()
 
         assert info is None

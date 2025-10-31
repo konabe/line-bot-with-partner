@@ -33,7 +33,7 @@ class TestDigimonInfo:
 
     def test_from_mapping_with_none(self):
         """Noneを渡してもエラーにならないこと"""
-        info = DigimonInfo.from_mapping(None)
+        info = DigimonInfo.from_mapping(None)  # type: ignore
 
         assert info.id == 0
         assert info.name == ""

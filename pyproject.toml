@@ -9,3 +9,15 @@ default_section = "THIRDPARTY"
 [tool.black]
 line-length = 88
 target-version = ["py311"]
+
+[tool.pyright]
+include = ["src"]
+exclude = ["**/__pycache__", "**/.venv", "**/node_modules", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportMissingImports = false
+reportMissingModuleSource = false

@@ -44,6 +44,10 @@ jobs:
         run: |
           flake8 src/ tests/
 
+      - name: pyright
+        run: |
+          pyright
+
       - name: Run tests
         env:
           PYTHONPATH: .

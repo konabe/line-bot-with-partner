@@ -3,6 +3,7 @@ from typing import Any, Optional, cast
 from ...domain.services.janken_game_master_service import JankenGameMasterService
 from ...infrastructure.logger import Logger, create_logger
 from ..usecases.protocols import (
+    DigimonAdapterProtocol,
     LineAdapterProtocol,
     OpenAIAdapterProtocol,
     WeatherAdapterProtocol,
@@ -24,7 +25,7 @@ class MessageRouter:
         openai_adapter: OpenAIAdapterProtocol,
         weather_adapter: WeatherAdapterProtocol,
         pokemon_adapter=None,
-        digimon_adapter=None,
+        digimon_adapter: Optional[DigimonAdapterProtocol] = None,
         logger: Optional[Logger] = None,
         janken_service: Optional[JankenGameMasterService] = None,
     ):
@@ -108,6 +109,9 @@ class MessageRouter:
 
     def _route_digimon(self, event) -> None:
         logger.info("デジモンリクエスト受信: usecase に委譲")
+        if self.digimon_adapter is None:
+            logger.error("digimon_adapter が設定されていません")
+            return
         SendDigimonUsecase(self.line_adapter, self.digimon_adapter).execute(event)
 
     def _route_chatgpt(self, event, text: str) -> None:
