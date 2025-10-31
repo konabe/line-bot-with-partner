@@ -48,3 +48,73 @@ def test_dataclass_is_frozen():
     # assignment should raise FrozenInstanceError (or AttributeError on some runtimes)
     with pytest.raises((dataclasses.FrozenInstanceError, AttributeError)):
         info.name = "Ivysaur"  # type: ignore
+
+
+def test_translate_types_to_japanese_basic():
+    """基本的なタイプ変換"""
+    result = PokemonInfo.translate_types_to_japanese(["fire", "water"])
+    assert result == ["ほのお", "みず"]
+
+
+def test_translate_types_to_japanese_all_types():
+    """全タイプの変換"""
+    result = PokemonInfo.translate_types_to_japanese(
+        [
+            "normal",
+            "fighting",
+            "flying",
+            "poison",
+            "ground",
+            "rock",
+            "bug",
+            "ghost",
+            "steel",
+            "fire",
+            "water",
+            "grass",
+            "electric",
+            "psychic",
+            "ice",
+            "dragon",
+            "dark",
+            "fairy",
+        ]
+    )
+    assert result == [
+        "ノーマル",
+        "かくとう",
+        "ひこう",
+        "どく",
+        "じめん",
+        "いわ",
+        "むし",
+        "ゴースト",
+        "はがね",
+        "ほのお",
+        "みず",
+        "くさ",
+        "でんき",
+        "エスパー",
+        "こおり",
+        "ドラゴン",
+        "あく",
+        "フェアリー",
+    ]
+
+
+def test_translate_types_to_japanese_unknown_type():
+    """未知のタイプは元のまま返される"""
+    result = PokemonInfo.translate_types_to_japanese(["unknown_type"])
+    assert result == ["unknown_type"]
+
+
+def test_translate_types_to_japanese_empty_list():
+    """空のリストは空のリストを返す"""
+    result = PokemonInfo.translate_types_to_japanese([])
+    assert result == []
+
+
+def test_translate_types_to_japanese_mixed():
+    """既知と未知のタイプが混在"""
+    result = PokemonInfo.translate_types_to_japanese(["fire", "unknown", "water"])
+    assert result == ["ほのお", "unknown", "みず"]

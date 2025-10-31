@@ -10,28 +10,6 @@ from ..logger import create_logger
 
 
 class PokemonApiAdapter:
-    # ポケモンタイプの英日変換辞書
-    TYPE_TRANSLATIONS = {
-        "normal": "ノーマル",
-        "fighting": "かくとう",
-        "flying": "ひこう",
-        "poison": "どく",
-        "ground": "じめん",
-        "rock": "いわ",
-        "bug": "むし",
-        "ghost": "ゴースト",
-        "steel": "はがね",
-        "fire": "ほのお",
-        "water": "みず",
-        "grass": "くさ",
-        "electric": "でんき",
-        "psychic": "エスパー",
-        "ice": "こおり",
-        "dragon": "ドラゴン",
-        "dark": "あく",
-        "fairy": "フェアリー",
-    }
-
     def __init__(self, logger=None):
         self.logger = logger or create_logger(__name__)
 
@@ -52,7 +30,7 @@ class PokemonApiAdapter:
             name = self._get_japanese_name(data, name_en)
 
             type_names_en = [t["type"]["name"] for t in data.get("types", [])]
-            types = self._translate_types_to_japanese(type_names_en)
+            types = PokemonInfo.translate_types_to_japanese(type_names_en)
 
             image_url = (
                 data.get("sprites", {})
@@ -88,13 +66,3 @@ class PokemonApiAdapter:
             self.logger.warning(f"日本語名取得に失敗: {e}")
 
         return fallback_name
-
-    def _translate_types_to_japanese(self, type_names_en: list[str]) -> list[str]:
-        """英語のタイプ名を日本語に変換する"""
-        japanese_types = []
-        for type_name in type_names_en:
-            japanese_name = self.TYPE_TRANSLATIONS.get(type_name, type_name)
-            japanese_types.append(japanese_name)
-            if japanese_name == type_name:
-                self.logger.warning(f"未知のタイプ名: {type_name}")
-        return japanese_types

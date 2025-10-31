@@ -9,6 +9,37 @@ class PokemonInfo:
     image_url: Optional[str]
     zukan_no: int
 
+    # ポケモンタイプの英日変換辞書
+    TYPE_TRANSLATIONS = {
+        "normal": "ノーマル",
+        "fighting": "かくとう",
+        "flying": "ひこう",
+        "poison": "どく",
+        "ground": "じめん",
+        "rock": "いわ",
+        "bug": "むし",
+        "ghost": "ゴースト",
+        "steel": "はがね",
+        "fire": "ほのお",
+        "water": "みず",
+        "grass": "くさ",
+        "electric": "でんき",
+        "psychic": "エスパー",
+        "ice": "こおり",
+        "dragon": "ドラゴン",
+        "dark": "あく",
+        "fairy": "フェアリー",
+    }
+
+    @staticmethod
+    def translate_types_to_japanese(type_names_en: List[str]) -> List[str]:
+        """英語のタイプ名を日本語に変換する"""
+        japanese_types = []
+        for type_name in type_names_en:
+            japanese_name = PokemonInfo.TYPE_TRANSLATIONS.get(type_name, type_name)
+            japanese_types.append(japanese_name)
+        return japanese_types
+
     @classmethod
     def from_mapping(cls, data: Dict[str, Any]) -> "PokemonInfo":
         if data is None:
