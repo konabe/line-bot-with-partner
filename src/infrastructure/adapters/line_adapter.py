@@ -28,35 +28,22 @@ class LineMessagingAdapter:
             )
             return
         try:
+            payload_for_log = None
             try:
-                payload_for_log = None
-                try:
-                    payload_for_log = reply_message_request.to_dict()
-                except Exception:
-                    try:
-                        payload_for_log = reply_message_request.dict(
-                            by_alias=True, exclude_none=True
-                        )
-                    except Exception:
-                        payload_for_log = None
-                try:
-                    self.logger.debug(f"reply payload: {payload_for_log}")
-                except Exception:
-                    self.logger.debug("reply payload: <unable to serialize>")
-
-                self.messaging_api.reply_message(reply_message_request)
-                return
+                payload_for_log = reply_message_request.to_dict()
             except Exception:
                 try:
-                    from linebot.v3.messaging import models
-
-                    sdk_req = models.ReplyMessageRequest.parse_obj(
-                        reply_message_request
+                    payload_for_log = reply_message_request.dict(
+                        by_alias=True, exclude_none=True
                     )
-                    self.messaging_api.reply_message(sdk_req)
-                    return
                 except Exception:
-                    raise
+                    payload_for_log = None
+            try:
+                self.logger.debug(f"reply payload: {payload_for_log}")
+            except Exception:
+                self.logger.debug("reply payload: <unable to serialize>")
+
+            self.messaging_api.reply_message(reply_message_request)
         except Exception as e:
             self.logger.error(f"Error when calling messaging_api.reply_message: {e}")
             raise
@@ -69,27 +56,16 @@ class LineMessagingAdapter:
             return
         try:
             try:
-                try:
-                    self.logger.debug(f"push payload: {push_message_request.to_dict()}")
-                except Exception:
-                    try:
-                        self.logger.debug(
-                            f"push payload: {push_message_request.dict(by_alias=True, exclude_none=True)}"
-                        )
-                    except Exception:
-                        self.logger.debug("push payload: <unable to serialize>")
-
-                self.messaging_api.push_message(push_message_request)
-                return
+                self.logger.debug(f"push payload: {push_message_request.to_dict()}")
             except Exception:
                 try:
-                    from linebot.v3.messaging import models
-
-                    sdk_req = models.PushMessageRequest.parse_obj(push_message_request)
-                    self.messaging_api.push_message(sdk_req)
-                    return
+                    self.logger.debug(
+                        f"push payload: {push_message_request.dict(by_alias=True, exclude_none=True)}"
+                    )
                 except Exception:
-                    raise
+                    self.logger.debug("push payload: <unable to serialize>")
+
+            self.messaging_api.push_message(push_message_request)
         except Exception as e:
             self.logger.error(f"Error when calling messaging_api.push_message: {e}")
             raise
