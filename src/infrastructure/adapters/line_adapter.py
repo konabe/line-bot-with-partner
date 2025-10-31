@@ -27,22 +27,10 @@ class LineMessagingAdapter:
                 "messaging_api is not initialized; skipping reply_message"
             )
             return
-        try:
-            payload_for_log = None
-            try:
-                payload_for_log = reply_message_request.to_dict()
-            except Exception:
-                try:
-                    payload_for_log = reply_message_request.dict(
-                        by_alias=True, exclude_none=True
-                    )
-                except Exception:
-                    payload_for_log = None
-            try:
-                self.logger.debug(f"reply payload: {payload_for_log}")
-            except Exception:
-                self.logger.debug("reply payload: <unable to serialize>")
 
+        self._log_payload(reply_message_request, "reply")
+
+        try:
             self.messaging_api.reply_message(reply_message_request)
         except Exception as e:
             self.logger.error(f"Error when calling messaging_api.reply_message: {e}")
@@ -54,17 +42,10 @@ class LineMessagingAdapter:
                 "messaging_api is not initialized; skipping push_message"
             )
             return
-        try:
-            try:
-                self.logger.debug(f"push payload: {push_message_request.to_dict()}")
-            except Exception:
-                try:
-                    self.logger.debug(
-                        f"push payload: {push_message_request.dict(by_alias=True, exclude_none=True)}"
-                    )
-                except Exception:
-                    self.logger.debug("push payload: <unable to serialize>")
 
+        self._log_payload(push_message_request, "push")
+
+        try:
             self.messaging_api.push_message(push_message_request)
         except Exception as e:
             self.logger.error(f"Error when calling messaging_api.push_message: {e}")
@@ -87,6 +68,19 @@ class LineMessagingAdapter:
         except Exception as e:
             self.logger.error(f"Failed to fetch profile for {user_id}: {e}")
             return None
+
+    def _log_payload(self, request, message_type: str):
+        """リクエストのペイロードをログ出力する"""
+        try:
+            payload = request.to_dict()
+        except Exception:
+            try:
+                payload = request.dict(by_alias=True, exclude_none=True)
+            except Exception:
+                self.logger.debug(f"{message_type} payload: <unable to serialize>")
+                return
+
+        self.logger.debug(f"{message_type} payload: {payload}")
 
 
 __all__ = ["LineMessagingAdapter"]
