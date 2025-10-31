@@ -29,8 +29,7 @@ class PokemonApiAdapter:
 
             name = self._get_japanese_name(data, name_en)
 
-            type_names_en = [t["type"]["name"] for t in data.get("types", [])]
-            types = PokemonInfo.translate_types_to_japanese(type_names_en)
+            types = [t["type"]["name"] for t in data.get("types", [])]
 
             image_url = (
                 data.get("sprites", {})

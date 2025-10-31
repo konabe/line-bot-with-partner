@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 @dataclass(frozen=True)
 class PokemonInfo:
     name: str
-    types: List[str]
+    types: List[str]  # 英語のタイプ名を格納
     image_url: Optional[str]
     zukan_no: int
 
@@ -31,14 +31,12 @@ class PokemonInfo:
         "fairy": "フェアリー",
     }
 
-    @staticmethod
-    def translate_types_to_japanese(type_names_en: List[str]) -> List[str]:
-        """英語のタイプ名を日本語に変換する"""
-        japanese_types = []
-        for type_name in type_names_en:
-            japanese_name = PokemonInfo.TYPE_TRANSLATIONS.get(type_name, type_name)
-            japanese_types.append(japanese_name)
-        return japanese_types
+    @property
+    def types_ja(self) -> List[str]:
+        """タイプ名の日本語リストを返す"""
+        return [
+            self.TYPE_TRANSLATIONS.get(type_name, type_name) for type_name in self.types
+        ]
 
     @classmethod
     def from_mapping(cls, data: Dict[str, Any]) -> "PokemonInfo":

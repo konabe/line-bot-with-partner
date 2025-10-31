@@ -50,16 +50,19 @@ def test_dataclass_is_frozen():
         info.name = "Ivysaur"  # type: ignore
 
 
-def test_translate_types_to_japanese_basic():
+def test_types_ja_basic():
     """基本的なタイプ変換"""
-    result = PokemonInfo.translate_types_to_japanese(["fire", "water"])
-    assert result == ["ほのお", "みず"]
+    info = PokemonInfo(
+        name="Charizard", types=["fire", "water"], image_url=None, zukan_no=6
+    )
+    assert info.types_ja == ["ほのお", "みず"]
 
 
-def test_translate_types_to_japanese_all_types():
+def test_types_ja_all_types():
     """全タイプの変換"""
-    result = PokemonInfo.translate_types_to_japanese(
-        [
+    info = PokemonInfo(
+        name="Test",
+        types=[
             "normal",
             "fighting",
             "flying",
@@ -78,9 +81,11 @@ def test_translate_types_to_japanese_all_types():
             "dragon",
             "dark",
             "fairy",
-        ]
+        ],
+        image_url=None,
+        zukan_no=0,
     )
-    assert result == [
+    assert info.types_ja == [
         "ノーマル",
         "かくとう",
         "ひこう",
@@ -102,19 +107,21 @@ def test_translate_types_to_japanese_all_types():
     ]
 
 
-def test_translate_types_to_japanese_unknown_type():
+def test_types_ja_unknown_type():
     """未知のタイプは元のまま返される"""
-    result = PokemonInfo.translate_types_to_japanese(["unknown_type"])
-    assert result == ["unknown_type"]
+    info = PokemonInfo(name="Test", types=["unknown_type"], image_url=None, zukan_no=0)
+    assert info.types_ja == ["unknown_type"]
 
 
-def test_translate_types_to_japanese_empty_list():
+def test_types_ja_empty_list():
     """空のリストは空のリストを返す"""
-    result = PokemonInfo.translate_types_to_japanese([])
-    assert result == []
+    info = PokemonInfo(name="Test", types=[], image_url=None, zukan_no=0)
+    assert info.types_ja == []
 
 
-def test_translate_types_to_japanese_mixed():
+def test_types_ja_mixed():
     """既知と未知のタイプが混在"""
-    result = PokemonInfo.translate_types_to_japanese(["fire", "unknown", "water"])
-    assert result == ["ほのお", "unknown", "みず"]
+    info = PokemonInfo(
+        name="Test", types=["fire", "unknown", "water"], image_url=None, zukan_no=0
+    )
+    assert info.types_ja == ["ほのお", "unknown", "みず"]

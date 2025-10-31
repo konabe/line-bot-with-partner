@@ -17,27 +17,29 @@ def test_pokemon_adapter_initialization():
     assert adapter.logger is not None
 
 
-def test_translate_types_to_japanese():
-    """英語タイプの日本語変換テスト"""
+def test_types_ja_property():
+    """types_jaプロパティのテスト"""
     # 基本的なタイプ変換
-    result = PokemonInfo.translate_types_to_japanese(["fire", "water"])
-    assert result == ["ほのお", "みず"]
+    info = PokemonInfo(name="Test", types=["fire", "water"], image_url=None, zukan_no=1)
+    assert info.types_ja == ["ほのお", "みず"]
 
     # 単一タイプ
-    result = PokemonInfo.translate_types_to_japanese(["electric"])
-    assert result == ["でんき"]
+    info = PokemonInfo(name="Test", types=["electric"], image_url=None, zukan_no=1)
+    assert info.types_ja == ["でんき"]
 
     # 未知のタイプは元のまま
-    result = PokemonInfo.translate_types_to_japanese(["unknown_type"])
-    assert result == ["unknown_type"]
+    info = PokemonInfo(name="Test", types=["unknown_type"], image_url=None, zukan_no=1)
+    assert info.types_ja == ["unknown_type"]
 
     # 空のリスト
-    result = PokemonInfo.translate_types_to_japanese([])
-    assert result == []
+    info = PokemonInfo(name="Test", types=[], image_url=None, zukan_no=1)
+    assert info.types_ja == []
 
     # 複数タイプ（ドラゴン/ひこう）
-    result = PokemonInfo.translate_types_to_japanese(["dragon", "flying"])
-    assert result == ["ドラゴン", "ひこう"]
+    info = PokemonInfo(
+        name="Test", types=["dragon", "flying"], image_url=None, zukan_no=1
+    )
+    assert info.types_ja == ["ドラゴン", "ひこう"]
 
 
 # 注意: 実際のAPIを呼び出すテストは、モックやフィクスチャーが必要
