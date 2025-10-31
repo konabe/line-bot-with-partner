@@ -36,17 +36,18 @@ class OpenAIAdapter:
 
         # PromptLayerの設定
         self.promptlayer_api_key = os.environ.get("PROMPTLAYER_API_KEY")
-        self.openai_client = None
+        self.promptlayer_client = None
         if self.promptlayer_api_key and promptlayer_available:
             try:
-                # PromptLayer SDKでOpenAIクライアントをラップ
-                promptlayer.api_key = self.promptlayer_api_key
-                self.openai_client = promptlayer.openai.OpenAI(api_key=self.api_key)
+                # PromptLayer クライアントを初期化
+                self.promptlayer_client = promptlayer.PromptLayer(
+                    api_key=self.promptlayer_api_key
+                )
                 self.use_promptlayer = True
-                self.logger.info("PromptLayer SDK enabled")
+                self.logger.info("PromptLayer enabled")
             except Exception as e:
                 self.logger.warning(
-                    f"Failed to initialize PromptLayer SDK: {e}. Falling back to direct OpenAI API."
+                    f"Failed to initialize PromptLayer: {e}. Falling back to direct OpenAI API."
                 )
                 self.use_promptlayer = False
         else:
@@ -61,7 +62,7 @@ class OpenAIAdapter:
     def _call_openai_api(
         self, messages: list, pl_tags: Optional[list[str]] = None
     ) -> str:
-        """OpenAI APIを呼び出す（PromptLayer SDK対応）"""
+        """OpenAI APIを呼び出す（PromptLayer対応）"""
         payload = {
             "model": self.model,
             "messages": messages,
@@ -75,56 +76,72 @@ class OpenAIAdapter:
         except Exception:
             pass
 
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
         try:
-            if self.use_promptlayer and self.openai_client:
-                # PromptLayer SDKを使用
-                self.logger.debug("Using PromptLayer SDK")
-                response = self.openai_client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    max_completion_tokens=3000,
-                    pl_tags=pl_tags or [],
-                )
-                content = response.choices[0].message.content
-                if not content:
-                    raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
-                return content.strip()
-            else:
-                # 通常のOpenAI API呼び出し
-                self.logger.debug("Using direct OpenAI API")
-                headers = {
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                }
+            resp = requests.post(
+                OpenAIAdapter.OPENAI_API_URL,
+                json=payload,
+                headers=headers,
+                timeout=30,
+            )
 
-                resp = requests.post(
-                    OpenAIAdapter.OPENAI_API_URL,
-                    json=payload,
-                    headers=headers,
-                    timeout=30,
-                )
+            if resp.status_code >= 400:
+                body = resp.text or ""
+                if len(body) > 2000:
+                    body = body[:2000] + "...[truncated]"
+                self.logger.error(f"OpenAI returned status {resp.status_code}: {body}")
+                raise OpenAIError(f"OpenAI error {resp.status_code}: {body}")
 
-                if resp.status_code >= 400:
-                    body = resp.text or ""
-                    if len(body) > 2000:
-                        body = body[:2000] + "...[truncated]"
-                    self.logger.error(
-                        f"OpenAI returned status {resp.status_code}: {body}"
+            data = resp.json()
+
+            choices = data.get("choices", [])
+            if not choices:
+                raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
+
+            message = choices[0].get("message", {})
+            content = message.get("content", "")
+            if not content:
+                raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
+
+            # PromptLayerにログを送信 (REST API経由)
+            if self.use_promptlayer and self.promptlayer_client:
+                try:
+                    self.logger.debug("Logging to PromptLayer via REST API")
+                    pl_payload = {
+                        "function_name": "openai.ChatCompletion.create",
+                        "provider_type": "openai",
+                        "args": [],
+                        "kwargs": payload,
+                        "tags": pl_tags or [],
+                        "request_response": data,
+                        "request_start_time": resp.elapsed.total_seconds(),
+                        "request_end_time": resp.elapsed.total_seconds(),
+                    }
+
+                    pl_resp = requests.post(
+                        "https://api.promptlayer.com/rest/track-request",
+                        json=pl_payload,
+                        headers={
+                            "X-API-KEY": self.promptlayer_api_key,
+                            "Content-Type": "application/json",
+                        },
+                        timeout=5,
                     )
-                    raise OpenAIError(f"OpenAI error {resp.status_code}: {body}")
 
-                data = resp.json()
+                    if pl_resp.status_code == 200:
+                        self.logger.debug("Successfully logged to PromptLayer")
+                    else:
+                        self.logger.warning(
+                            f"PromptLayer returned status {pl_resp.status_code}: {pl_resp.text}"
+                        )
+                except Exception as e:
+                    self.logger.warning(f"Failed to log to PromptLayer: {e}")
 
-                choices = data.get("choices", [])
-                if not choices:
-                    raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
-
-                message = choices[0].get("message", {})
-                content = message.get("content", "")
-                if not content:
-                    raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
-
-                return content.strip()
+            return content.strip()
         except OpenAIError:
             # 既にOpenAIErrorの場合はそのまま再raise（二重ラップを防ぐ）
             raise
