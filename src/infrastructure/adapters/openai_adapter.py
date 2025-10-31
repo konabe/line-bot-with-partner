@@ -4,15 +4,8 @@ import os
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-import requests
 from openai import OpenAI
-
-try:
-    import promptlayer
-
-    promptlayer_available = True
-except ImportError:
-    promptlayer_available = False
+from promptlayer import PromptLayer
 
 from ..logger import Logger, create_logger
 
@@ -33,33 +26,18 @@ class OpenAIAdapter:
             raise OpenAIError(OpenAIAdapter.OPENAI_API_KEY_ERROR)
         self.model = os.environ.get("OPENAI_MODEL", OpenAIAdapter.DEFAULT_MODEL)
 
-        # OpenAI クライアントを初期化
-        self.openai_client = OpenAI(api_key=self.api_key)
-
         # PromptLayerの設定
         self.promptlayer_api_key = os.environ.get("PROMPTLAYER_API_KEY")
-        self.promptlayer_client = None
-        if self.promptlayer_api_key and promptlayer_available:
-            try:
-                # PromptLayer クライアントを初期化
-                self.promptlayer_client = promptlayer.PromptLayer(
-                    api_key=self.promptlayer_api_key
-                )
-                self.use_promptlayer = True
-                self.logger.info("PromptLayer enabled")
-            except Exception as e:
-                self.logger.warning(
-                    f"Failed to initialize PromptLayer: {e}. PromptLayer logging will be disabled."
-                )
-                self.use_promptlayer = False
+        if self.promptlayer_api_key:
+            # PromptLayerでラップされたOpenAIクライアントを使用
+            promptlayer_client = PromptLayer(api_key=self.promptlayer_api_key)
+            OpenAIWithPL = promptlayer_client.openai.OpenAI
+            self.openai_client = OpenAIWithPL(api_key=self.api_key)
+            self.logger.info("PromptLayer enabled with OpenAI SDK wrapper")
         else:
-            self.use_promptlayer = False
-            if not self.promptlayer_api_key:
-                self.logger.info("PromptLayer disabled (PROMPTLAYER_API_KEY not set)")
-            elif not promptlayer_available:
-                self.logger.info(
-                    "PromptLayer disabled (promptlayer package not installed)"
-                )
+            # 通常のOpenAIクライアントを使用
+            self.openai_client = OpenAI(api_key=self.api_key)
+            self.logger.info("PromptLayer disabled (PROMPTLAYER_API_KEY not set)")
 
     def _call_openai_api(
         self, messages: list, pl_tags: Optional[list[str]] = None
@@ -74,51 +52,22 @@ class OpenAIAdapter:
 
         try:
             # OpenAI SDKで呼び出し
-            response = self.openai_client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_completion_tokens=3000,
-            )
+            # PromptLayerでラップされている場合は自動的にログが送信される
+            kwargs = {
+                "model": self.model,
+                "messages": messages,
+                "max_completion_tokens": 3000,
+            }
+
+            # PromptLayerを使用している場合のみpl_tagsを追加
+            if self.promptlayer_api_key and pl_tags:
+                kwargs["pl_tags"] = pl_tags
+
+            response = self.openai_client.chat.completions.create(**kwargs)
 
             content = response.choices[0].message.content
             if not content:
                 raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
-
-            # PromptLayerにログを送信
-            if self.use_promptlayer and self.promptlayer_client:
-                try:
-                    self.logger.debug("Logging to PromptLayer")
-                    pl_payload = {
-                        "function_name": "openai.chat.completions.create",
-                        "provider_type": "openai",
-                        "args": [],
-                        "kwargs": {
-                            "model": self.model,
-                            "messages": messages,
-                            "max_completion_tokens": 3000,
-                        },
-                        "tags": pl_tags or [],
-                        "request_response": response.model_dump(),
-                        "request_start_time": 0,
-                        "request_end_time": 0,
-                        "api_key": self.promptlayer_api_key,
-                    }
-
-                    pl_resp = requests.post(
-                        "https://api.promptlayer.com/rest/track-request",
-                        json=pl_payload,
-                        headers={"Content-Type": "application/json"},
-                        timeout=5,
-                    )
-
-                    if pl_resp.status_code == 200:
-                        self.logger.debug("Successfully logged to PromptLayer")
-                    else:
-                        self.logger.warning(
-                            f"PromptLayer returned status {pl_resp.status_code}: {pl_resp.text}"
-                        )
-                except Exception as e:
-                    self.logger.warning(f"Failed to log to PromptLayer: {e}")
 
             return content.strip()
         except OpenAIError:
