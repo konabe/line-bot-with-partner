@@ -145,9 +145,17 @@ class OpenAIAdapter:
             )
 
             return content.strip()
+        except OpenAIError:
+            # 既にOpenAIErrorの場合はそのまま再raise（二重ラップを防ぐ）
+            raise
+        except requests.exceptions.RequestException as e:
+            # ネットワークエラー
+            self.logger.error(f"OpenAI API network error: {e}")
+            raise OpenAIError(f"Network error: {str(e)}") from e
         except Exception as e:
-            self.logger.error(f"OpenAI API error: {e}")
-            raise OpenAIError(str(e)) from e
+            # その他の予期しないエラー
+            self.logger.error(f"Unexpected error in OpenAI API call: {e}")
+            raise OpenAIError(f"Unexpected error: {str(e)}") from e
 
     def get_chatgpt_meal_suggestion(self):
         now = datetime.datetime.now(ZoneInfo("Asia/Tokyo"))
