@@ -28,11 +28,7 @@
   },
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python-envs.pythonProjects": [],
-  "python.analysis.typeCheckingMode": "standard",
   "python.analysis.autoImportCompletions": true,
-  "python.analysis.extraPaths": [
-    "${workspaceFolder}/src"
-  ],
   "python.testing.pytestArgs": [
     "tests"
   ],

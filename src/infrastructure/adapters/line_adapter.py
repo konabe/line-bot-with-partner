@@ -1,5 +1,8 @@
-import os
 from typing import Optional
+
+from linebot.v3.messaging import MessagingApi
+from linebot.v3.messaging.api_client import ApiClient
+from linebot.v3.messaging.configuration import Configuration
 
 from ..logger import Logger, create_logger
 
@@ -11,13 +14,9 @@ class LineMessagingAdapter:
 
     def init(self, access_token: str):
         try:
-            from linebot.v3.messaging import MessagingApi
-            from linebot.v3.messaging.api_client import ApiClient
-            from linebot.v3.messaging.configuration import Configuration
-
-            _config = Configuration(access_token=access_token)
-            _api_client = ApiClient(configuration=_config)
-            self.messaging_api = MessagingApi(_api_client)
+            config = Configuration(access_token=access_token)
+            api_client = ApiClient(configuration=config)
+            self.messaging_api = MessagingApi(api_client)
         except Exception as e:
             self.messaging_api = None
             self.logger.error(f"Failed to initialize LineMessagingAdapter: {e}")
@@ -96,33 +95,22 @@ class LineMessagingAdapter:
             raise
 
     def get_display_name_from_line_profile(self, user_id: str) -> Optional[str]:
-        try:
-            import requests
-        except Exception:
-            self.logger.debug("requests not available; skipping profile fetch")
-            return None
-
-        token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN", "")
-        if not token or not user_id:
+        if self.messaging_api is None:
             self.logger.debug(
-                "LINE_CHANNEL_ACCESS_TOKEN not set or empty; skipping profile fetch"
+                "messaging_api is not initialized; skipping profile fetch"
             )
             return None
 
+        if not user_id:
+            self.logger.debug("user_id is empty; skipping profile fetch")
+            return None
+
         try:
-            resp = requests.get(
-                f"https://api.line.me/v2/bot/profile/{user_id}",
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=2,
-            )
-            if resp.status_code == 200:
-                return resp.json().get("displayName")
-            self.logger.debug(
-                f"profile fetch returned status {resp.status_code} for {user_id}"
-            )
+            profile = self.messaging_api.get_profile(user_id)
+            return profile.display_name
         except Exception as e:
             self.logger.error(f"Failed to fetch profile for {user_id}: {e}")
-        return None
+            return None
 
 
 __all__ = ["LineMessagingAdapter"]
