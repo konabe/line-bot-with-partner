@@ -177,7 +177,18 @@ class OpenAIAdapter:
             self.logger.warning(f"Failed to track score to PromptLayer: {e}")
             return False
 
-    def get_chatgpt_meal_suggestion(self) -> str:
+    def get_chatgpt_meal_suggestion(
+        self, return_request_id: bool = False
+    ) -> str | tuple[str, Optional[int]]:
+        """料理提案を取得
+
+        Args:
+            return_request_id: PromptLayerリクエストIDを返すかどうか
+
+        Returns:
+            return_request_id=False: レスポンステキスト
+            return_request_id=True: (レスポンステキスト, PromptLayerリクエストID)
+        """
         now = datetime.datetime.now(ZoneInfo("Asia/Tokyo"))
         now_str = now.strftime("%Y-%m-%d %H:%M")
         prompt = (
@@ -200,8 +211,12 @@ class OpenAIAdapter:
                     prompt_input_variables={"datetime": now_str},
                     version=1,
                 )
+            if return_request_id:
+                return response_text, pl_id
             return response_text
         else:
+            if return_request_id:
+                return result, None
             return result
 
     def get_chatgpt_response(self, user_message: str) -> str:

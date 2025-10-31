@@ -58,6 +58,7 @@ def bind_routes(
 
     postback_router_instance = PostbackRouter(
         _line_adapter,
+        openai_adapter=_get_openai_client(),
         logger=adapter_logger,
         janken_service=message_router_instance.janken_service,
     )

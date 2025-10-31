@@ -37,8 +37,10 @@ class FakeOpenAIAdapter:
         self.get_chatgpt_response_calls.append(user_message)
         return self.response_text
 
-    def get_chatgpt_meal_suggestion(self) -> str:
+    def get_chatgpt_meal_suggestion(self, return_request_id=False):
         self.get_chatgpt_meal_suggestion_calls.append(True)
+        if return_request_id:
+            return self.response_text, 12345
         return self.response_text
 
 

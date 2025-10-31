@@ -25,8 +25,11 @@ def test_execute_success():
             return self._fn(req)
 
     class FakeOpenAIAdapter:
-        def get_chatgpt_meal_suggestion(self):
-            return fake_suggester()
+        def get_chatgpt_meal_suggestion(self, return_request_id=False):
+            result = fake_suggester()
+            if return_request_id:
+                return result, 12345  # ダミーのリクエストID
+            return result
 
     usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapter())
     ev = FakeEvent()
@@ -38,6 +41,8 @@ def test_execute_success():
     assert req.reply_token == ev.reply_token
     assert isinstance(req.messages[0], TextMessage)
     assert "カレー" in req.messages[0].text
+    # 2つ目のメッセージ（評価ボタン）があることを確認
+    assert len(req.messages) == 2
 
 
 def test_execute_failure():
@@ -57,7 +62,7 @@ def test_execute_failure():
             return self._fn(req)
 
     class FakeOpenAIAdapterFail:
-        def get_chatgpt_meal_suggestion(self):
+        def get_chatgpt_meal_suggestion(self, return_request_id=False):
             return failing_suggester()
 
     usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapterFail())
