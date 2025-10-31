@@ -198,6 +198,7 @@ class OpenAIAdapter:
                     request_id=pl_id,
                     prompt_name="meal_suggestion",
                     prompt_input_variables={"datetime": now_str},
+                    version=1,
                 )
             return response_text
         else:
@@ -225,6 +226,7 @@ class OpenAIAdapter:
                     request_id=pl_id,
                     prompt_name="chat_response",
                     prompt_input_variables={"user_message": user_message},
+                    version=1,
                 )
             return response_text
         else:
