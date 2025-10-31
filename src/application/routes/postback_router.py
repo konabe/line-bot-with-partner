@@ -1,11 +1,10 @@
 from typing import Optional
 
-from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
-
 from ...domain.services.janken_game_master_service import JankenGameMasterService
 from ...infrastructure.logger import Logger, create_logger
 from ..types import PostbackEventLike
 from ..usecases.start_janken_game_usecase import StartJankenGameUsecase
+from ..usecases.track_meal_feedback_usecase import TrackMealFeedbackUsecase
 
 
 class PostbackRouter:
@@ -79,19 +78,12 @@ class PostbackRouter:
             self.logger.warning("openai_adapter not set, cannot track score")
             return
 
-        # スコアをPromptLayerに送信
-        success = self.openai_adapter.track_score(
-            request_id=pl_request_id, score=score, score_name="user_feedback"
+        # Usecaseを使ってフィードバックを送信
+        usecase = TrackMealFeedbackUsecase(
+            line_adapter=self.line_adapter,
+            openai_adapter=self.openai_adapter,
         )
-
-        # ユーザーに感謝のメッセージを返信
-        feedback_msg = "評価ありがとうございます！😊"
-        reply_message_request = ReplyMessageRequest(
-            replyToken=event.reply_token,
-            messages=[TextMessage(text=feedback_msg, quickReply=None, quoteToken=None)],
-            notificationDisabled=False,
-        )
-        self.line_adapter.reply_message(reply_message_request)
+        success = usecase.execute(event, pl_request_id, score)
 
         if success:
             self.logger.info(f"Successfully tracked meal feedback: score={score}")

@@ -21,6 +21,11 @@ class OpenAIAdapterProtocol(Protocol):
     ) -> str | tuple[str, Optional[int]]:
         ...
 
+    def track_score(
+        self, request_id: int, score: int, score_name: str = "user_feedback"
+    ) -> bool:
+        ...
+
 
 class WeatherAdapterProtocol(Protocol):
     def get_weather_text(self, location: str) -> str:
