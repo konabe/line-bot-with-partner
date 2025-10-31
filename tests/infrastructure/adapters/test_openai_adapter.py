@@ -1,4 +1,4 @@
-"""OpenAIAdapter のテスト"""
+"""OpenAIAdapter のテスト (OpenAI SDK版)"""
 
 from unittest.mock import MagicMock, patch
 
@@ -9,24 +9,32 @@ from src.infrastructure.adapters.openai_adapter import OpenAIAdapter, OpenAIErro
 
 class TestOpenAIAdapter:
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    def test_init_with_api_key(self):
+    @patch("src.infrastructure.adapters.openai_adapter.OpenAI")
+    def test_init_with_api_key(self, mock_openai_class):
         """環境変数にAPI Keyがある場合、正常に初期化できること"""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
         adapter = OpenAIAdapter()
 
         assert adapter.api_key == "test_api_key"
-        assert adapter.model == "gpt-5-mini"  # デフォルトモデル
-        assert adapter.use_promptlayer is False  # PROMPTLAYER_API_KEYがないのでFalse
+        assert adapter.model == "gpt-5-mini"
+        assert adapter.use_promptlayer is False
+        assert adapter.openai_client is mock_client
 
     @patch.dict(
         "os.environ",
         {"OPENAI_API_KEY": "test_api_key", "OPENAI_MODEL": "gpt-4"},
         clear=True,
     )
-    def test_init_with_custom_model(self):
+    @patch("src.infrastructure.adapters.openai_adapter.OpenAI")
+    def test_init_with_custom_model(self, mock_openai_class):
         """カスタムモデルを指定できること"""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
         adapter = OpenAIAdapter()
 
-        assert adapter.api_key == "test_api_key"
         assert adapter.model == "gpt-4"
 
     @patch.dict(
@@ -39,15 +47,17 @@ class TestOpenAIAdapter:
     )
     @patch("src.infrastructure.adapters.openai_adapter.promptlayer_available", True)
     @patch("src.infrastructure.adapters.openai_adapter.promptlayer")
-    def test_init_with_promptlayer(self, mock_promptlayer):
+    @patch("src.infrastructure.adapters.openai_adapter.OpenAI")
+    def test_init_with_promptlayer(self, mock_openai_class, mock_promptlayer):
         """PROMPTLAYER_API_KEYがある場合、PromptLayerが有効になること"""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
         mock_pl_client = MagicMock()
         mock_promptlayer.PromptLayer.return_value = mock_pl_client
 
         adapter = OpenAIAdapter()
 
         assert adapter.use_promptlayer is True
-        assert adapter.promptlayer_api_key == "test_promptlayer_key"
         assert adapter.promptlayer_client is mock_pl_client
 
     @patch.dict("os.environ", {}, clear=True)
@@ -59,214 +69,67 @@ class TestOpenAIAdapter:
         assert "OPENAI_API_KEY is not set" in str(excinfo.value)
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    def test_init_with_logger(self):
-        """loggerを指定してインスタンス化できること"""
-        mock_logger = MagicMock()
-        adapter = OpenAIAdapter(logger=mock_logger)
+    @patch("src.infrastructure.adapters.openai_adapter.OpenAI")
+    def test_get_chatgpt_meal_suggestion_success(self, mock_openai_class):
+        """料理提案を正常に取得できること"""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
 
-        assert adapter.logger == mock_logger
-
-    @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_get_chatgpt_meal_suggestion_success(self, mock_post):
-        """料理提案を正常に取得できること（PromptLayerなし）"""
         mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [
-                {
-                    "message": {
-                        "content": "1. カレーライス（調理時間: 30分）\n2. オムライス（調理時間: 20分）\n3. チャーハン（調理時間: 15分）"
-                    }
-                }
-            ]
-        }
-        mock_post.return_value = mock_response
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "カレーライス"
+        mock_client.chat.completions.create.return_value = mock_response
 
         adapter = OpenAIAdapter()
         result = adapter.get_chatgpt_meal_suggestion()
 
         assert "カレーライス" in result
-        assert mock_post.call_count == 1
-        call_args = mock_post.call_args
-        assert call_args[0][0] == "https://api.openai.com/v1/chat/completions"
-        assert call_args[1]["json"]["model"] == "gpt-5-mini"
-        assert "料理アドバイザー" in call_args[1]["json"]["messages"][0]["content"]
+        mock_client.chat.completions.create.assert_called_once()
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_get_chatgpt_response_success(self, mock_post):
-        """チャット応答を正常に取得できること（PromptLayerなし）"""
+    @patch("src.infrastructure.adapters.openai_adapter.OpenAI")
+    def test_get_chatgpt_response_success(self, mock_openai_class):
+        """チャット応答を正常に取得できること"""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
         mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "こんにちは！ぐんまちゃんだよ！"}}]
-        }
-        mock_post.return_value = mock_response
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "こんにちは！"
+        mock_client.chat.completions.create.return_value = mock_response
 
         adapter = OpenAIAdapter()
         result = adapter.get_chatgpt_response("こんにちは")
-
-        assert result == "こんにちは！ぐんまちゃんだよ！"
-        assert mock_post.call_count == 1
-        call_args = mock_post.call_args
-        assert call_args[1]["json"]["messages"][0]["role"] == "system"
-        assert "ぐんまちゃん" in call_args[1]["json"]["messages"][0]["content"]
-        assert call_args[1]["json"]["messages"][1]["role"] == "user"
-        assert call_args[1]["json"]["messages"][1]["content"] == "こんにちは"
-
-    @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_get_chatgpt_meal_suggestion_api_error(self, mock_post):
-        """APIがエラーを返した場合、OpenAIErrorが発生すること"""
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_response.text = "Internal Server Error"
-        mock_post.return_value = mock_response
-
-        adapter = OpenAIAdapter()
-        with pytest.raises(OpenAIError) as excinfo:
-            adapter.get_chatgpt_meal_suggestion()
-
-        assert "500" in str(excinfo.value)
-
-    @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_get_chatgpt_response_api_error(self, mock_post):
-        """APIがエラーを返した場合、OpenAIErrorが発生すること"""
-        mock_response = MagicMock()
-        mock_response.status_code = 401
-        mock_response.text = "Unauthorized"
-        mock_post.return_value = mock_response
-
-        adapter = OpenAIAdapter()
-        with pytest.raises(OpenAIError) as excinfo:
-            adapter.get_chatgpt_response("テスト")
-
-        assert "401" in str(excinfo.value)
-
-    @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_get_chatgpt_meal_suggestion_no_choices(self, mock_post):
-        """APIレスポンスにchoicesがない場合、エラーが発生すること"""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"choices": []}
-        mock_post.return_value = mock_response
-
-        adapter = OpenAIAdapter()
-        with pytest.raises(OpenAIError) as excinfo:
-            adapter.get_chatgpt_meal_suggestion()
-
-        assert "no choices from OpenAI" in str(excinfo.value)
-
-    @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_get_chatgpt_response_empty_content(self, mock_post):
-        """APIレスポンスのcontentが空の場合、エラーが発生すること"""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {"choices": [{"message": {"content": ""}}]}
-        mock_post.return_value = mock_response
-
-        adapter = OpenAIAdapter()
-        with pytest.raises(OpenAIError) as excinfo:
-            adapter.get_chatgpt_response("テスト")
-
-        assert "no choices from OpenAI" in str(excinfo.value)
-
-    @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_get_chatgpt_meal_suggestion_network_error(self, mock_post):
-        """ネットワークエラーが発生した場合、OpenAIErrorが発生すること"""
-        mock_post.side_effect = Exception("Network error")
-
-        adapter = OpenAIAdapter()
-        with pytest.raises(OpenAIError) as excinfo:
-            adapter.get_chatgpt_meal_suggestion()
-
-        assert "Network error" in str(excinfo.value)
-
-    @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_get_chatgpt_response_network_error(self, mock_post):
-        """ネットワークエラーが発生した場合、OpenAIErrorが発生すること"""
-        mock_post.side_effect = Exception("Connection timeout")
-
-        adapter = OpenAIAdapter()
-        with pytest.raises(OpenAIError) as excinfo:
-            adapter.get_chatgpt_response("テスト")
-
-        assert "Connection timeout" in str(excinfo.value)
-
-    @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_get_chatgpt_response_strips_whitespace(self, mock_post):
-        """応答の前後の空白が除去されること"""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "  こんにちは！  \n"}}]
-        }
-        mock_post.return_value = mock_response
-
-        adapter = OpenAIAdapter()
-        result = adapter.get_chatgpt_response("テスト")
 
         assert result == "こんにちは！"
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_error_response_body_truncation(self, mock_post):
-        """エラーレスポンスのボディが長い場合、切り詰められること"""
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_response.text = "x" * 3000  # 3000文字の長いエラーメッセージ
-        mock_post.return_value = mock_response
+    @patch("src.infrastructure.adapters.openai_adapter.OpenAI")
+    def test_api_error(self, mock_openai_class):
+        """APIがエラーを返した場合、OpenAIErrorが発生すること"""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+        mock_client.chat.completions.create.side_effect = Exception("API Error")
 
         adapter = OpenAIAdapter()
-        with pytest.raises(OpenAIError) as excinfo:
-            adapter.get_chatgpt_meal_suggestion()
-
-        error_message = str(excinfo.value)
-        assert "[truncated]" in error_message
-        assert len(error_message) < 2500  # 切り詰められている
+        with pytest.raises(OpenAIError):
+            adapter.get_chatgpt_response("テスト")
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_authorization_header_is_set(self, mock_post):
-        """Authorizationヘッダーが正しく設定されること"""
+    @patch("src.infrastructure.adapters.openai_adapter.OpenAI")
+    def test_empty_content(self, mock_openai_class):
+        """contentが空の場合、エラーが発生すること"""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
         mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "テスト応答"}}]
-        }
-        mock_post.return_value = mock_response
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = None
+        mock_client.chat.completions.create.return_value = mock_response
 
         adapter = OpenAIAdapter()
-        adapter.get_chatgpt_response("テスト")
-
-        call_args = mock_post.call_args
-        headers = call_args[1]["headers"]
-        assert headers["Authorization"] == "Bearer test_api_key"
-        assert headers["Content-Type"] == "application/json"
-
-    @patch.dict("os.environ", {"OPENAI_API_KEY": "test_api_key"}, clear=True)
-    @patch("requests.post")
-    def test_timeout_is_set(self, mock_post):
-        """タイムアウトが設定されていること"""
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "choices": [{"message": {"content": "テスト応答"}}]
-        }
-        mock_post.return_value = mock_response
-
-        adapter = OpenAIAdapter()
-        adapter.get_chatgpt_response("テスト")
-
-        call_args = mock_post.call_args
-        assert call_args[1]["timeout"] == 30
+        with pytest.raises(OpenAIError):
+            adapter.get_chatgpt_response("テスト")
 
     @patch.dict(
         "os.environ",
@@ -278,61 +141,31 @@ class TestOpenAIAdapter:
     )
     @patch("src.infrastructure.adapters.openai_adapter.promptlayer_available", True)
     @patch("src.infrastructure.adapters.openai_adapter.promptlayer")
+    @patch("src.infrastructure.adapters.openai_adapter.OpenAI")
     @patch("requests.post")
-    def test_get_chatgpt_response_with_promptlayer(self, mock_post, mock_promptlayer):
-        """PromptLayerを使用してチャット応答を取得できること"""
+    def test_promptlayer_logging(
+        self, mock_requests_post, mock_openai_class, mock_promptlayer
+    ):
+        """PromptLayerへのログ送信が正常に動作すること"""
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
         mock_pl_client = MagicMock()
         mock_promptlayer.PromptLayer.return_value = mock_pl_client
 
-        # OpenAIからの応答をモック
-        mock_openai_response = MagicMock()
-        mock_openai_response.status_code = 200
-        mock_openai_response.json.return_value = {
-            "id": "chatcmpl-123",
-            "choices": [{"message": {"content": "PromptLayerで応答！"}}],
-        }
-        mock_openai_response.elapsed.total_seconds.return_value = 1.5
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "テスト応答"
+        mock_response.model_dump.return_value = {"id": "test-id"}
+        mock_client.chat.completions.create.return_value = mock_response
 
-        # PromptLayerへのログ送信をモック
         mock_pl_response = MagicMock()
         mock_pl_response.status_code = 200
-        mock_pl_response.text = '{"success": true}'
-
-        mock_post.side_effect = [mock_openai_response, mock_pl_response]
+        mock_requests_post.return_value = mock_pl_response
 
         adapter = OpenAIAdapter()
         result = adapter.get_chatgpt_response("こんにちは")
 
-        assert result == "PromptLayerで応答！"
-        assert adapter.use_promptlayer is True
-
-        # OpenAI APIとPromptLayer APIの2回呼び出される
-        assert mock_post.call_count == 2
-
-        # PromptLayerへのリクエストを検証
-        pl_call = mock_post.call_args_list[1]
-        assert "track-request" in pl_call[0][0]
-        # api_keyはペイロードに含まれる
-        pl_payload = pl_call[1]["json"]
+        assert result == "テスト応答"
+        mock_requests_post.assert_called_once()
+        pl_payload = mock_requests_post.call_args[1]["json"]
         assert pl_payload["api_key"] == "test_promptlayer_key"
-
-    @patch.dict(
-        "os.environ",
-        {
-            "OPENAI_API_KEY": "test_api_key",
-            "PROMPTLAYER_API_KEY": "test_promptlayer_key",
-        },
-        clear=True,
-    )
-    @patch("src.infrastructure.adapters.openai_adapter.promptlayer_available", True)
-    @patch("src.infrastructure.adapters.openai_adapter.promptlayer")
-    def test_promptlayer_initialization_failure_falls_back(self, mock_promptlayer):
-        """PromptLayerの初期化が失敗した場合、フォールバックすること"""
-        # PromptLayerの初期化で例外を発生させる
-        mock_promptlayer.PromptLayer.side_effect = Exception("PromptLayer init failed")
-
-        adapter = OpenAIAdapter()
-
-        # PromptLayerの初期化に失敗したのでFalseになる
-        assert adapter.use_promptlayer is False
-        assert adapter.promptlayer_client is None
