@@ -37,12 +37,18 @@ class TestOpenAIAdapter:
         },
         clear=True,
     )
-    def test_init_with_promptlayer(self):
+    @patch("src.infrastructure.adapters.openai_adapter.promptlayer_available", True)
+    @patch("src.infrastructure.adapters.openai_adapter.promptlayer")
+    def test_init_with_promptlayer(self, mock_promptlayer):
         """PROMPTLAYER_API_KEYがある場合、PromptLayerが有効になること"""
+        mock_openai_client = MagicMock()
+        mock_promptlayer.openai.OpenAI.return_value = mock_openai_client
+
         adapter = OpenAIAdapter()
 
         assert adapter.use_promptlayer is True
         assert adapter.promptlayer_api_key == "test_promptlayer_key"
+        assert adapter.openai_client is mock_openai_client
 
     @patch.dict("os.environ", {}, clear=True)
     def test_init_without_api_key(self):
@@ -270,29 +276,28 @@ class TestOpenAIAdapter:
         },
         clear=True,
     )
-    @patch("requests.post")
-    def test_get_chatgpt_response_with_promptlayer(self, mock_post):
-        """PromptLayerを使用してチャット応答を取得できること"""
-        # OpenAIからの応答をモック
-        mock_openai_response = MagicMock()
-        mock_openai_response.status_code = 200
-        mock_openai_response.json.return_value = {
-            "choices": [{"message": {"content": "PromptLayerで応答！"}}]
-        }
-
-        # PromptLayerへのログ送信をモック
-        mock_pl_response = MagicMock()
-        mock_pl_response.status_code = 200
-
-        mock_post.side_effect = [mock_openai_response, mock_pl_response]
+    @patch("src.infrastructure.adapters.openai_adapter.promptlayer_available", True)
+    @patch("src.infrastructure.adapters.openai_adapter.promptlayer")
+    def test_get_chatgpt_response_with_promptlayer(self, mock_promptlayer):
+        """PromptLayer SDKを使用してチャット応答を取得できること"""
+        # PromptLayerのOpenAIクライアントをモック
+        mock_openai_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock()]
+        mock_response.choices[0].message.content = "PromptLayerで応答！"
+        mock_openai_client.chat.completions.create.return_value = mock_response
+        mock_promptlayer.openai.OpenAI.return_value = mock_openai_client
 
         adapter = OpenAIAdapter()
         result = adapter.get_chatgpt_response("こんにちは")
 
         assert result == "PromptLayerで応答！"
         assert adapter.use_promptlayer is True
-        # OpenAI APIとPromptLayer APIの2回呼び出される
-        assert mock_post.call_count == 2
+
+        # PromptLayer SDKのcreateメソッドが呼ばれたことを確認
+        mock_openai_client.chat.completions.create.assert_called_once()
+        call_kwargs = mock_openai_client.chat.completions.create.call_args[1]
+        assert call_kwargs["pl_tags"] == ["chat_response"]
 
     @patch.dict(
         "os.environ",
@@ -302,26 +307,17 @@ class TestOpenAIAdapter:
         },
         clear=True,
     )
-    @patch("requests.post")
-    def test_promptlayer_logging_failure_does_not_affect_response(self, mock_post):
-        """PromptLayerへのログ送信が失敗しても応答は返されること"""
-        # OpenAIからの応答は成功
-        mock_openai_response = MagicMock()
-        mock_openai_response.status_code = 200
-        mock_openai_response.json.return_value = {
-            "choices": [{"message": {"content": "テスト応答"}}]
-        }
-
-        # PromptLayerへのログ送信は失敗（2回目の呼び出し）
-        def side_effect_func(*args, **kwargs):
-            if "promptlayer.com" in args[0]:
-                raise Exception("PromptLayer connection failed")
-            return mock_openai_response
-
-        mock_post.side_effect = side_effect_func
+    @patch("src.infrastructure.adapters.openai_adapter.promptlayer_available", True)
+    @patch("src.infrastructure.adapters.openai_adapter.promptlayer")
+    def test_promptlayer_sdk_failure_falls_back_to_direct_api(self, mock_promptlayer):
+        """PromptLayer SDKの初期化が失敗した場合、直接APIにフォールバックすること"""
+        # PromptLayer SDKの初期化で例外を発生させる
+        mock_promptlayer.openai.OpenAI.side_effect = Exception(
+            "PromptLayer init failed"
+        )
 
         adapter = OpenAIAdapter()
-        result = adapter.get_chatgpt_response("テスト")
 
-        # PromptLayerが失敗しても応答は正常に返される
-        assert result == "テスト応答"
+        # PromptLayerの初期化に失敗したのでFalseになる
+        assert adapter.use_promptlayer is False
+        assert adapter.openai_client is None

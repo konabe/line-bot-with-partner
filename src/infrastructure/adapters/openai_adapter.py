@@ -1,7 +1,6 @@
 import datetime
 import json
 import os
-import time
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -9,8 +8,10 @@ import requests
 
 try:
     import promptlayer
+
+    promptlayer_available = True
 except ImportError:
-    promptlayer = None  # type: ignore
+    promptlayer_available = False
 
 from ..logger import Logger, create_logger
 
@@ -35,70 +36,32 @@ class OpenAIAdapter:
 
         # PromptLayerの設定
         self.promptlayer_api_key = os.environ.get("PROMPTLAYER_API_KEY")
-        if self.promptlayer_api_key:
-            self.use_promptlayer = True
-            self.logger.info("PromptLayer enabled")
+        self.openai_client = None
+        if self.promptlayer_api_key and promptlayer_available:
+            try:
+                # PromptLayer SDKでOpenAIクライアントをラップ
+                promptlayer.api_key = self.promptlayer_api_key
+                self.openai_client = promptlayer.openai.OpenAI(api_key=self.api_key)
+                self.use_promptlayer = True
+                self.logger.info("PromptLayer SDK enabled")
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to initialize PromptLayer SDK: {e}. Falling back to direct OpenAI API."
+                )
+                self.use_promptlayer = False
         else:
             self.use_promptlayer = False
-            self.logger.info("PromptLayer disabled (PROMPTLAYER_API_KEY not set)")
-
-    def _log_to_promptlayer(
-        self,
-        request_payload: dict,
-        response_data: dict,
-        pl_tags: list[str],
-        request_start_time: float,
-        request_end_time: float,
-    ) -> None:
-        """PromptLayerにログを送信（REST API経由）"""
-        if not self.use_promptlayer:
-            return
-
-        try:
-            # PromptLayer REST APIにログを送信
-            pl_request = {
-                "function_name": "openai.chat.completions.create",
-                "provider_type": "openai",
-                "args": [],
-                "kwargs": request_payload,
-                "tags": pl_tags,
-                "request_response": response_data,
-                "request_start_time": request_start_time,
-                "request_end_time": request_end_time,
-                "api_key": self.promptlayer_api_key,
-            }
-
-            self.logger.debug(
-                f"Sending log to PromptLayer: {json.dumps(pl_request, ensure_ascii=False, default=str)}"
-            )
-
-            response = requests.post(
-                "https://api.promptlayer.com/rest/track-request",
-                json=pl_request,
-                timeout=5,
-            )
-
-            if response.status_code == 200:
-                self.logger.debug(
-                    f"Successfully logged to PromptLayer with tags: {pl_tags}"
+            if not self.promptlayer_api_key:
+                self.logger.info("PromptLayer disabled (PROMPTLAYER_API_KEY not set)")
+            elif not promptlayer_available:
+                self.logger.info(
+                    "PromptLayer disabled (promptlayer package not installed)"
                 )
-            else:
-                self.logger.warning(
-                    f"PromptLayer returned status {response.status_code}: {response.text}"
-                )
-        except Exception as e:
-            self.logger.warning(f"Failed to log to PromptLayer: {e}")
 
     def _call_openai_api(
         self, messages: list, pl_tags: Optional[list[str]] = None
     ) -> str:
-        """OpenAI APIを呼び出す（PromptLayer対応）"""
-        request_start_time = time.time()
-
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        """OpenAI APIを呼び出す（PromptLayer SDK対応）"""
         payload = {
             "model": self.model,
             "messages": messages,
@@ -106,45 +69,62 @@ class OpenAIAdapter:
         }
 
         try:
-            try:
-                self.logger.debug(
-                    f"OpenAI request payload: {json.dumps(payload, ensure_ascii=False)}"
+            self.logger.debug(
+                f"OpenAI request payload: {json.dumps(payload, ensure_ascii=False)}"
+            )
+        except Exception:
+            pass
+
+        try:
+            if self.use_promptlayer and self.openai_client:
+                # PromptLayer SDKを使用
+                self.logger.debug("Using PromptLayer SDK")
+                response = self.openai_client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    max_completion_tokens=3000,
+                    pl_tags=pl_tags or [],
                 )
-            except Exception:
-                pass
+                content = response.choices[0].message.content
+                if not content:
+                    raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
+                return content.strip()
+            else:
+                # 通常のOpenAI API呼び出し
+                self.logger.debug("Using direct OpenAI API")
+                headers = {
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                }
 
-            resp = requests.post(
-                OpenAIAdapter.OPENAI_API_URL,
-                json=payload,
-                headers=headers,
-                timeout=30,
-            )
-            request_end_time = time.time()
+                resp = requests.post(
+                    OpenAIAdapter.OPENAI_API_URL,
+                    json=payload,
+                    headers=headers,
+                    timeout=30,
+                )
 
-            if resp.status_code >= 400:
-                body = resp.text or ""
-                if len(body) > 2000:
-                    body = body[:2000] + "...[truncated]"
-                self.logger.error(f"OpenAI returned status {resp.status_code}: {body}")
-                raise OpenAIError(f"OpenAI error {resp.status_code}: {body}")
+                if resp.status_code >= 400:
+                    body = resp.text or ""
+                    if len(body) > 2000:
+                        body = body[:2000] + "...[truncated]"
+                    self.logger.error(
+                        f"OpenAI returned status {resp.status_code}: {body}"
+                    )
+                    raise OpenAIError(f"OpenAI error {resp.status_code}: {body}")
 
-            data = resp.json()
+                data = resp.json()
 
-            choices = data.get("choices", [])
-            if not choices:
-                raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
+                choices = data.get("choices", [])
+                if not choices:
+                    raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
 
-            message = choices[0].get("message", {})
-            content = message.get("content", "")
-            if not content:
-                raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
+                message = choices[0].get("message", {})
+                content = message.get("content", "")
+                if not content:
+                    raise OpenAIError(OpenAIAdapter.NO_CHOICES_ERROR)
 
-            # PromptLayerにログを送信
-            self._log_to_promptlayer(
-                payload, data, pl_tags or [], request_start_time, request_end_time
-            )
-
-            return content.strip()
+                return content.strip()
         except OpenAIError:
             # 既にOpenAIErrorの場合はそのまま再raise（二重ラップを防ぐ）
             raise
