@@ -186,10 +186,22 @@ class OpenAIAdapter:
             "簡単なレシピや調理時間（目安）と一言コメント付きで提案してください。日本語で答えてください。"
         )
         messages = [{"role": "user", "content": prompt}]
-        result = self._call_openai_api(messages, pl_tags=["meal_suggestion"])
-        # return_pl_id=Falseの場合は必ずstrが返る
-        assert isinstance(result, str)
-        return result
+        result = self._call_openai_api(
+            messages, pl_tags=["meal_suggestion"], return_pl_id=True
+        )
+
+        if isinstance(result, tuple):
+            response_text, pl_id = result
+            # プロンプトをトラッキング
+            if pl_id is not None:
+                self.track_prompt(
+                    request_id=pl_id,
+                    prompt_name="meal_suggestion",
+                    prompt_input_variables={"datetime": now_str},
+                )
+            return response_text
+        else:
+            return result
 
     def get_chatgpt_response(self, user_message: str) -> str:
         system_prompt = (
@@ -201,7 +213,19 @@ class OpenAIAdapter:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ]
-        result = self._call_openai_api(messages, pl_tags=["chat_response"])
-        # return_pl_id=Falseの場合は必ずstrが返る
-        assert isinstance(result, str)
-        return result
+        result = self._call_openai_api(
+            messages, pl_tags=["chat_response"], return_pl_id=True
+        )
+
+        if isinstance(result, tuple):
+            response_text, pl_id = result
+            # プロンプトをトラッキング
+            if pl_id is not None:
+                self.track_prompt(
+                    request_id=pl_id,
+                    prompt_name="chat_response",
+                    prompt_input_variables={"user_message": user_message},
+                )
+            return response_text
+        else:
+            return result
