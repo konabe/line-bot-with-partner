@@ -20,7 +20,8 @@ repos:
     rev: v0.8.4
     hooks:
       - id: ruff
-        args: ["--select", "PLC0415"]
+        name: ruff (import-outside-toplevel check)
+        args: ["check", "--select", "PLC0415", "--preview", "--no-fix"]
         files: ^src/
 
   - repo: https://github.com/RobertCraigie/pyright-python
