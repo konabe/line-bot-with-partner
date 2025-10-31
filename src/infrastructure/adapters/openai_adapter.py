@@ -120,13 +120,13 @@ class OpenAIAdapter:
                         "request_response": data,
                         "request_start_time": resp.elapsed.total_seconds(),
                         "request_end_time": resp.elapsed.total_seconds(),
+                        "api_key": self.promptlayer_api_key,
                     }
 
                     pl_resp = requests.post(
                         "https://api.promptlayer.com/rest/track-request",
                         json=pl_payload,
                         headers={
-                            "X-API-KEY": self.promptlayer_api_key,
                             "Content-Type": "application/json",
                         },
                         timeout=5,

@@ -312,7 +312,9 @@ class TestOpenAIAdapter:
         # PromptLayerへのリクエストを検証
         pl_call = mock_post.call_args_list[1]
         assert "track-request" in pl_call[0][0]
-        assert pl_call[1]["headers"]["X-API-KEY"] == "test_promptlayer_key"
+        # api_keyはペイロードに含まれる
+        pl_payload = pl_call[1]["json"]
+        assert pl_payload["api_key"] == "test_promptlayer_key"
 
     @patch.dict(
         "os.environ",
