@@ -1,4 +1,6 @@
 import json
+import time
+from collections import OrderedDict
 
 from flask import abort, request
 from linebot.v3.exceptions import InvalidSignatureError
@@ -8,6 +10,47 @@ from linebot.v3.webhook import WebhookHandler
 from ..infrastructure.logger import create_logger
 
 logger = create_logger(__name__)
+
+# webhookEventIdの重複チェック用キャッシュ (最大1000件、1時間保持)
+_processed_events = OrderedDict()
+_MAX_CACHE_SIZE = 1000
+_CACHE_TTL = 3600  # 1時間
+
+
+def _is_duplicate_event(body: str) -> bool:
+    try:
+        data = json.loads(body)
+        current_time = time.time()
+
+        # 古いエントリを削除
+        expired_keys = [
+            k for k, v in _processed_events.items() if current_time - v > _CACHE_TTL
+        ]
+        for k in expired_keys:
+            del _processed_events[k]
+
+        # 各イベントのwebhookEventIdをチェック
+        for event in data.get("events", []):
+            webhook_event_id = event.get("webhookEventId")
+            if not webhook_event_id:
+                continue
+
+            # 既に処理済みなら重複
+            if webhook_event_id in _processed_events:
+                logger.warning(f"Duplicate webhookEventId detected: {webhook_event_id}")
+                return True
+
+            # 新規イベントとして記録
+            _processed_events[webhook_event_id] = current_time
+
+            # キャッシュサイズ制限
+            if len(_processed_events) > _MAX_CACHE_SIZE:
+                _processed_events.popitem(last=False)
+
+        return False
+    except Exception as e:
+        logger.error(f"Error checking duplicate event: {e}")
+        return False
 
 
 def register_routes(app, handler: WebhookHandler, line_adapter):
@@ -21,6 +64,12 @@ def register_routes(app, handler: WebhookHandler, line_adapter):
         signature = request.headers.get("X-Line-Signature", "")
         body = request.get_data(as_text=True)
         logger.debug(f"/callback called. Signature: {signature}, Body: {body}")
+
+        # webhookEventIdの重複チェック
+        if _is_duplicate_event(body):
+            logger.info("Duplicate webhook event detected, skipping processing")
+            return "OK", 200
+
         try:
             handler.handle(body, signature)
             logger.debug("handler.handle succeeded")
