@@ -43,6 +43,17 @@ class FakeOpenAIAdapter:
             return self.response_text, 12345
         return self.response_text
 
+    def generate_image_prompt(self, requirements: str) -> str:
+        return "A detailed image prompt"
+
+    def generate_image(self, prompt: str) -> str:
+        return "https://example.com/image.png"
+
+    def track_score(
+        self, request_id: int, score: int, score_name: str = "user_feedback"
+    ) -> bool:
+        return True
+
 
 class FakeWeatherAdapter:
     """テスト用天気アダプタ"""

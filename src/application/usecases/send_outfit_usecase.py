@@ -43,10 +43,15 @@ class SendOutfitUsecase:
 
         now = datetime.datetime.now(ZoneInfo("Asia/Tokyo"))
         month = now.month
-        prompt = f"あなたは優秀な服飾コーディネーターです。アラサーの日本人男性と日本人女性に対して、{month}月の雰囲気に適した摂氏{temp}度の服装を画像で提案してください。"
+        requirements = (
+            f"アラサーの日本人男性と日本人女性に適した、{month}月の雰囲気に合う摂氏{temp}度の服装コーディネート。キレイ目のファッション。"
+        )
 
         try:
-            image_url = self._openai_adapter.generate_image(prompt)
+            # GPTにDALL-E 3用のプロンプトを生成させる
+            image_prompt = self._openai_adapter.generate_image_prompt(requirements)
+            # 生成されたプロンプトで画像を作成
+            image_url = self._openai_adapter.generate_image(image_prompt)
         except Exception:
             image_url = None
 

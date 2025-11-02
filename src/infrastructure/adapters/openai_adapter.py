@@ -250,6 +250,37 @@ class OpenAIAdapter:
         else:
             return result
 
+    def generate_image_prompt(self, requirements: str) -> str:
+        """Generate a detailed DALL-E 3 prompt from user requirements.
+
+        Args:
+            requirements: User's requirements for the image (e.g., "摂氏20度の11月の服装")
+
+        Returns:
+            A detailed prompt optimized for DALL-E 3
+        """
+        system_prompt = (
+            "あなたは画像生成AI（DALL-E 3）のための最適なプロンプトを作成する専門家です。"
+            "ユーザーの要求を受け取り、詳細で具体的な英語のプロンプトを生成してください。"
+            "プロンプトには以下を含めてください：\n"
+            "- 具体的なビジュアル要素（色、スタイル、構図など）\n"
+            "- 雰囲気やムード\n"
+            "- 画像のスタイル（写実的、イラスト風など）\n"
+            "プロンプトは英語で、簡潔かつ具体的に記述してください。"
+        )
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": f"以下の要求に基づいて、DALL-E 3用の詳細なプロンプトを英語で生成してください：\n{requirements}",
+            },
+        ]
+        result = self._call_openai_api(messages, pl_tags=["image_prompt_generation"])
+
+        if isinstance(result, tuple):
+            return result[0]
+        return result
+
     def generate_image(self, prompt: str) -> Optional[str]:
         """Generate an image from prompt and return a publicly accessible URL if available.
 

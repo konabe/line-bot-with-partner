@@ -22,6 +22,10 @@ def test_execute_success():
             return self._fn(req)
 
     class FakeOpenAIAdapter:
+        def generate_image_prompt(self, requirements: str) -> str:
+            # GPTが生成したかのような英語プロンプトを返す
+            return "A stylish outfit suitable for 20 degrees Celsius weather"
+
         def generate_image(self, prompt: str) -> str:
             # return a dummy public URL
             return "https://example.com/outfit.png"
@@ -52,6 +56,9 @@ def test_execute_parse_failure():
             return self._fn(req)
 
     class FakeOpenAIAdapter:
+        def generate_image_prompt(self, requirements: str) -> str:
+            return "A stylish outfit suitable for temperature weather"
+
         def generate_image(self, prompt: str) -> str:
             return "https://example.com/outfit.png"
 
@@ -79,6 +86,9 @@ def test_execute_image_generation_failure():
             return self._fn(req)
 
     class FakeOpenAIAdapterFail:
+        def generate_image_prompt(self, requirements: str) -> str:
+            return "An outfit for 18 degrees Celsius"
+
         def generate_image(self, prompt: str) -> str:
             return None
 

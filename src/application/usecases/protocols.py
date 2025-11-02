@@ -19,6 +19,9 @@ class OpenAIAdapterProtocol(Protocol):
     def generate_image(self, prompt: str) -> Optional[str]:
         ...
 
+    def generate_image_prompt(self, requirements: str) -> str:
+        ...
+
     def get_chatgpt_meal_suggestion(
         self, return_request_id: bool = False
     ) -> str | tuple[str, Optional[int]]:
