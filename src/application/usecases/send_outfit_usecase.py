@@ -43,7 +43,7 @@ class SendOutfitUsecase:
 
         now = datetime.datetime.now(ZoneInfo("Asia/Tokyo"))
         month = now.month
-        prompt = f"あなたは優秀な服飾コーディネーターです。アラサーの日本人男性と日本人女性に対して、{month}月の雰囲気に適した{temp}度の服装を画像で提案してください。"
+        prompt = f"あなたは優秀な服飾コーディネーターです。アラサーの日本人男性と日本人女性に対して、{month}月の雰囲気に適した摂氏{temp}度の服装を画像で提案してください。"
 
         try:
             image_url = self._openai_adapter.generate_image(prompt)
