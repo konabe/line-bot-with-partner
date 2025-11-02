@@ -249,3 +249,38 @@ class OpenAIAdapter:
             return response_text
         else:
             return result
+
+    def generate_image(self, prompt: str) -> Optional[str]:
+        """Generate an image from prompt and return a publicly accessible URL if available.
+
+        Note: depending on the OpenAI client and model, the response may contain
+        `data[0].url` or `data[0].b64_json`. We prefer `url` and return None otherwise.
+        """
+        try:
+            resp = self.openai_client.images.generate(prompt=prompt, size="1024x1024")
+            # resp may be an object with .data or a dict
+            data = None
+            if hasattr(resp, "data"):
+                data = resp.data
+            elif isinstance(resp, dict):
+                data = resp.get("data")
+
+            if not data:
+                return None
+
+            first = data[0]
+            # try attribute then dict access
+            url = None
+            if hasattr(first, "url"):
+                url = first.url
+            elif isinstance(first, dict):
+                url = first.get("url") or first.get("b64_json")
+
+            # if it's base64 JSON we cannot host it here; return None to indicate failure
+            if not url:
+                return None
+
+            return url
+        except Exception as e:
+            self.logger.warning(f"Failed to generate image: {e}")
+            return None

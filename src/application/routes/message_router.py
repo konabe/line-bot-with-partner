@@ -12,6 +12,7 @@ from ..usecases.send_chat_response_usecase import SendChatResponseUsecase
 from ..usecases.send_digimon_usecase import SendDigimonUsecase
 from ..usecases.send_janken_options_usecase import SendJankenOptionsUsecase
 from ..usecases.send_meal_usecase import SendMealUsecase
+from ..usecases.send_outfit_usecase import SendOutfitUsecase
 from ..usecases.send_pokemon_zukan_usecase import SendPokemonZukanUsecase
 from ..usecases.send_weather_usecase import SendWeatherUsecase
 
@@ -80,6 +81,8 @@ class MessageRouter:
 
         if "天気" in text:
             return self._route_weather(event, text)
+        if "度の服装" in text:
+            return self._route_outfit(event, text)
         if t == "じゃんけん":
             return self._route_janken(event)
         if t == "今日のご飯":
@@ -119,3 +122,7 @@ class MessageRouter:
         SendChatResponseUsecase(
             cast(Any, self.line_adapter), cast(Any, self.openai_adapter)
         ).execute(event, text)
+
+    def _route_outfit(self, event, text: str) -> None:
+        logger.info("服装画像リクエストを受信: usecase に委譲")
+        SendOutfitUsecase(self.line_adapter, self.openai_adapter).execute(event, text)
