@@ -257,30 +257,66 @@ class OpenAIAdapter:
         `data[0].url` or `data[0].b64_json`. We prefer `url` and return None otherwise.
         """
         try:
-            resp = self.openai_client.images.generate(prompt=prompt, size="1024x1024")
+            self.logger.info(f"Generating image with prompt: {prompt[:100]}...")
+
+            # DALL-E 3 は response_format="url" がデフォルトですが明示的に指定
+            resp = self.openai_client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                size="1024x1024",
+                quality="standard",
+                n=1,
+            )
+
+            self.logger.debug(f"Image generation response type: {type(resp)}")
+
             # resp may be an object with .data or a dict
             data = None
             if hasattr(resp, "data"):
                 data = resp.data
+                self.logger.debug(
+                    f"Got data from resp.data, length: {len(data) if data else 0}"
+                )
             elif isinstance(resp, dict):
                 data = resp.get("data")
+                self.logger.debug(
+                    f"Got data from dict, length: {len(data) if data else 0}"
+                )
 
-            if not data:
+            if not data or len(data) == 0:
+                self.logger.warning("No data in image generation response")
                 return None
 
             first = data[0]
+            self.logger.debug(
+                f"First data item type: {type(first)}, has url: {hasattr(first, 'url')}"
+            )
+
             # try attribute then dict access
             url = None
             if hasattr(first, "url"):
                 url = first.url
+                self.logger.debug(
+                    f"Got URL from attribute: {url[:50] if url else None}..."
+                )
             elif isinstance(first, dict):
-                url = first.get("url") or first.get("b64_json")
+                url = first.get("url")
+                self.logger.debug(f"Got URL from dict: {url[:50] if url else None}...")
 
-            # if it's base64 JSON we cannot host it here; return None to indicate failure
+                # Check if b64_json was returned instead
+                if not url and "b64_json" in first:
+                    self.logger.warning(
+                        "Image returned as b64_json instead of URL - not supported yet"
+                    )
+                    return None
+
             if not url:
+                self.logger.warning("No URL found in image generation response")
                 return None
 
+            self.logger.info(f"Successfully generated image URL: {url[:80]}...")
             return url
+
         except Exception as e:
-            self.logger.warning(f"Failed to generate image: {e}")
+            self.logger.error(f"Failed to generate image: {type(e).__name__}: {e}")
             return None
