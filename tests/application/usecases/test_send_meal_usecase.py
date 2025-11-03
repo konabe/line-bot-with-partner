@@ -24,6 +24,12 @@ def test_execute_success():
         def reply_message(self, req):
             return self._fn(req)
 
+        def push_message(self, req):
+            pass
+
+        def get_display_name_from_line_profile(self, user_id):
+            return None
+
     class FakeOpenAIAdapter:
         def get_chatgpt_meal_suggestion(self, return_request_id=False):
             result = fake_suggester()
@@ -31,7 +37,21 @@ def test_execute_success():
                 return result, 12345  # ダミーのリクエストID
             return result
 
-    usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapter())
+        def get_chatgpt_response(self, user_message: str) -> str:
+            return ""
+
+        def generate_image(self, prompt: str) -> str:
+            return ""
+
+        def generate_image_prompt(self, requirements: str) -> str:
+            return ""
+
+        def track_score(
+            self, request_id: int, score: int, score_name: str = "user_feedback"
+        ) -> bool:
+            return True
+
+    usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapter())  # type: ignore
     ev = FakeEvent()
     usecase.execute(ev)
 
@@ -61,11 +81,31 @@ def test_execute_failure():
         def reply_message(self, req):
             return self._fn(req)
 
+        def push_message(self, req):
+            pass
+
+        def get_display_name_from_line_profile(self, user_id):
+            return None
+
     class FakeOpenAIAdapterFail:
         def get_chatgpt_meal_suggestion(self, return_request_id=False):
             return failing_suggester()
 
-    usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapterFail())
+        def get_chatgpt_response(self, user_message: str) -> str:
+            return ""
+
+        def generate_image(self, prompt: str) -> str:
+            return ""
+
+        def generate_image_prompt(self, requirements: str) -> str:
+            return ""
+
+        def track_score(
+            self, request_id: int, score: int, score_name: str = "user_feedback"
+        ) -> bool:
+            return True
+
+    usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapterFail())  # type: ignore
     ev = FakeEvent()
     usecase.execute(ev)
 
