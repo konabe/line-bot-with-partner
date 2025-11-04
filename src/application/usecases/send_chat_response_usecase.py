@@ -19,12 +19,6 @@ class SendChatResponseUsecase:
         self._logger = logger or create_logger(__name__)
 
     def execute(self, event: MessageEvent, user_message: str) -> None:
-        """ChatGPTからの応答を取得してLINEに返信する
-
-        Args:
-            event: LINEメッセージイベント
-            user_message: ユーザーからのメッセージ
-        """
         if not event.reply_token:
             self._logger.warning("reply_tokenが存在しないため、応答をスキップします")
             return
@@ -36,14 +30,6 @@ class SendChatResponseUsecase:
             self._logger.exception(f"チャット応答の送信中にエラーが発生: {e}")
 
     def _get_response(self, user_message: str) -> str:
-        """ChatGPTから応答を取得する
-
-        Args:
-            user_message: ユーザーからのメッセージ
-
-        Returns:
-            ChatGPTからの応答テキスト、または取得失敗時のエラーメッセージ
-        """
         try:
             response = self._openai_adapter.get_chatgpt_response(user_message)
             if response:
@@ -54,12 +40,6 @@ class SendChatResponseUsecase:
         return "申し訳ないです。応答を生成できませんでした。管理者に OPENAI_API_KEY の設定を確認してもらってください。"
 
     def _send_reply(self, reply_token: str, text: str) -> None:
-        """LINEに返信メッセージを送信する
-
-        Args:
-            reply_token: LINEの返信トークン
-            text: 送信するテキスト
-        """
         reply_message_request = ReplyMessageRequest(
             replyToken=reply_token,
             messages=[TextMessage(text=text, quickReply=None, quoteToken=None)],
