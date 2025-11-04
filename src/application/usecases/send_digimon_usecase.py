@@ -1,6 +1,5 @@
 from typing import Optional
 
-from linebot.v3.messaging import models
 from linebot.v3.messaging.models import (
     ReplyMessageRequest,
     TemplateMessage,
@@ -56,23 +55,12 @@ class SendDigimonUsecase:
             return
 
         try:
-            if hasattr(candidate, "dict") and candidate.__class__.__name__ in (
-                "TextMessage",
-                "TemplateMessage",
-            ):
-                reply_message_request = ReplyMessageRequest(
-                    replyToken=event.reply_token,
-                    messages=[candidate],
-                    notificationDisabled=False,
-                )
-                self.line_adapter.reply_message(reply_message_request)
-                return
-
-            sdk_req = models.ReplyMessageRequest.parse_obj(
-                {"replyToken": event.reply_token, "messages": [candidate]}
+            reply_message_request = ReplyMessageRequest(
+                replyToken=event.reply_token,
+                messages=[candidate],
+                notificationDisabled=False,
             )
-            self.line_adapter.reply_message(sdk_req)
-
+            self.line_adapter.reply_message(reply_message_request)
         except Exception as e:
             self._logger.error(f"LINE メッセージ送信エラー: {e}")
             raise
