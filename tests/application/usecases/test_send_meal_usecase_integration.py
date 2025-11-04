@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 from linebot.v3.messaging.models import (
     ButtonsTemplate,
@@ -11,9 +11,10 @@ from src.application.usecases.send_meal_usecase import SendMealUsecase
 from tests.support.mock_adapter import MockMessagingAdapter
 
 
-class FakeEvent:
-    def __init__(self):
-        self.reply_token = "test_reply_token_123"
+def _make_fake_event():
+    event = Mock()
+    event.reply_token = "test_reply_token_123"
+    return event
 
 
 def test_execute_with_successful_meal_suggestion():
@@ -23,7 +24,7 @@ def test_execute_with_successful_meal_suggestion():
     mock_openai_adapter.get_chatgpt_meal_suggestion.return_value = "本日のおすすめ料理は麻婆豆腐です。"
 
     usecase = SendMealUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     usecase.execute(event)
 
@@ -51,7 +52,7 @@ def test_execute_with_promptlayer_request_id():
     )
 
     usecase = SendMealUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     usecase.execute(event)
 
@@ -85,7 +86,7 @@ def test_execute_with_openai_exception():
     )
 
     usecase = SendMealUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     usecase.execute(event)
 
@@ -105,7 +106,7 @@ def test_execute_with_none_suggestion():
     mock_openai_adapter.get_chatgpt_meal_suggestion.return_value = None
 
     usecase = SendMealUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     usecase.execute(event)
 

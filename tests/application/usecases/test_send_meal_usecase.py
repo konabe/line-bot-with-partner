@@ -1,11 +1,14 @@
+from unittest.mock import Mock
+
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 
 from src.application.usecases.send_meal_usecase import SendMealUsecase
 
 
-class FakeEvent:
-    def __init__(self):
-        self.reply_token = "dummy"
+def _make_fake_event():
+    event = Mock()
+    event.reply_token = "dummy"
+    return event
 
 
 def test_execute_success():
@@ -52,7 +55,7 @@ def test_execute_success():
             return True
 
     usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapter())  # type: ignore
-    ev = FakeEvent()
+    ev = _make_fake_event()
     usecase.execute(ev)
 
     assert "req" in sent
@@ -106,7 +109,7 @@ def test_execute_failure():
             return True
 
     usecase = SendMealUsecase(FakeLineAdapter(fake_reply), FakeOpenAIAdapterFail())  # type: ignore
-    ev = FakeEvent()
+    ev = _make_fake_event()
     usecase.execute(ev)
 
     assert "req" in sent
