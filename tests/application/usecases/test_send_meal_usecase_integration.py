@@ -21,7 +21,9 @@ def test_execute_with_successful_meal_suggestion():
     """料理提案が正常に取得できる場合の結合テスト（PromptLayer未使用）"""
     mock_line_adapter = MockMessagingAdapter()
     mock_openai_adapter = MagicMock()
-    mock_openai_adapter.get_chatgpt_meal_suggestion.return_value = "本日のおすすめ料理は麻婆豆腐です。"
+    mock_openai_adapter.get_chatgpt_meal_suggestion.return_value = (
+        "本日のおすすめ料理は麻婆豆腐です。"
+    )
 
     usecase = SendMealUsecase(mock_line_adapter, mock_openai_adapter)
     event = _make_fake_event()

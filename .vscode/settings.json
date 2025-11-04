@@ -21,7 +21,7 @@
       "approve": true,
       "matchCommandLine": true
     },
-    "PYTHONPATH=. pytest": {
+    "PYTHONPATH=. pytest -v": {
       "approve": true,
       "matchCommandLine": true
     },
