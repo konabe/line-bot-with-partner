@@ -1,11 +1,12 @@
 from typing import Any, Optional, cast
 
-from ...domain.services.janken_game_master_service import JankenGameMasterService
 from ...infrastructure.logger import Logger, create_logger
 from ..usecases.protocols import (
     DigimonAdapterProtocol,
+    JankenServiceProtocol,
     LineAdapterProtocol,
     OpenAIAdapterProtocol,
+    PokemonAdapterProtocol,
     WeatherAdapterProtocol,
 )
 from ..usecases.send_chat_response_usecase import SendChatResponseUsecase
@@ -25,10 +26,10 @@ class MessageRouter:
         line_adapter: LineAdapterProtocol,
         openai_adapter: OpenAIAdapterProtocol,
         weather_adapter: WeatherAdapterProtocol,
-        pokemon_adapter=None,
-        digimon_adapter: Optional[DigimonAdapterProtocol] = None,
+        pokemon_adapter: PokemonAdapterProtocol,
+        digimon_adapter: DigimonAdapterProtocol,
+        janken_service: JankenServiceProtocol,
         logger: Optional[Logger] = None,
-        janken_service: Optional[JankenGameMasterService] = None,
     ):
         self.line_adapter = line_adapter
         self.openai_adapter = openai_adapter
@@ -36,7 +37,7 @@ class MessageRouter:
         self.pokemon_adapter = pokemon_adapter
         self.digimon_adapter = digimon_adapter
         self.logger = logger or create_logger(__name__)
-        self.janken_service = janken_service or JankenGameMasterService()
+        self.janken_service = janken_service
 
     def route_message(self, *args, **kwargs) -> None:
         # Be permissive about the handler calling convention.
@@ -116,9 +117,6 @@ class MessageRouter:
 
     def _route_digimon(self, event) -> None:
         logger.info("デジモンリクエスト受信: usecase に委譲")
-        if self.digimon_adapter is None:
-            logger.error("digimon_adapter が設定されていません")
-            return
         SendDigimonUsecase(self.line_adapter, self.digimon_adapter).execute(event)
 
     def _route_chatgpt(self, event, text: str) -> None:

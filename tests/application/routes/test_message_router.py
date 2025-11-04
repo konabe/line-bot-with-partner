@@ -103,6 +103,16 @@ class FakeDigimonAdapter:
         )
 
 
+class FakeJankenService:
+    """テスト用じゃんけんサービス"""
+
+    def __init__(self):
+        pass
+
+    def play_and_make_reply(self, user_hand_input: str, user_label: str) -> str:
+        return f"{user_label}: グー\nBot: チョキ\n結果: 勝ち"
+
+
 class FakeLogger:
     """テスト用ロガー"""
 
@@ -160,12 +170,17 @@ class TestMessageRouterEventHandling:
         line_adapter = FakeLineAdapter()
         openai_adapter = FakeOpenAIAdapter()
         weather_adapter = FakeWeatherAdapter()
+        pokemon_adapter = FakePokemonAdapter()
+        digimon_adapter = FakeDigimonAdapter()
+        janken_service = FakeJankenService()
 
         router = MessageRouter(
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=None,
+            pokemon_adapter,
+            digimon_adapter,
+            janken_service,
         )
 
         # event=None で呼び出し
@@ -179,13 +194,18 @@ class TestMessageRouterEventHandling:
         line_adapter = FakeLineAdapter()
         openai_adapter = FakeOpenAIAdapter()
         weather_adapter = FakeWeatherAdapter("快晴です")
+        pokemon_adapter = FakePokemonAdapter()
+        digimon_adapter = FakeDigimonAdapter()
+        janken_service = FakeJankenService()
         logger = FakeLogger()
 
         router = MessageRouter(
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=None,
+            pokemon_adapter,
+            digimon_adapter,
+            janken_service,
             logger=logger,
         )
 
@@ -212,7 +232,9 @@ class TestMessageRouterWeatherRoute:
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=None,
+            pokemon_adapter=FakePokemonAdapter(),
+            digimon_adapter=FakeDigimonAdapter(),
+            janken_service=FakeJankenService(),
             logger=logger,
         )
 
@@ -238,7 +260,9 @@ class TestMessageRouterJankenRoute:
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=None,
+            pokemon_adapter=FakePokemonAdapter(),
+            digimon_adapter=FakeDigimonAdapter(),
+            janken_service=FakeJankenService(),
             logger=logger,
         )
 
@@ -263,7 +287,9 @@ class TestMessageRouterMealRoute:
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=None,
+            pokemon_adapter=FakePokemonAdapter(),
+            digimon_adapter=FakeDigimonAdapter(),
+            janken_service=FakeJankenService(),
             logger=logger,
         )
 
@@ -283,13 +309,17 @@ class TestMessageRouterPokemonRoute:
         openai_adapter = FakeOpenAIAdapter()
         weather_adapter = FakeWeatherAdapter()
         pokemon_adapter = FakePokemonAdapter()
+        digimon_adapter = FakeDigimonAdapter()
+        janken_service = FakeJankenService()
         logger = FakeLogger()
 
         router = MessageRouter(
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=pokemon_adapter,
+            pokemon_adapter,
+            digimon_adapter,
+            janken_service,
             logger=logger,
         )
 
@@ -315,8 +345,9 @@ class TestMessageRouterDigimonRoute:
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=None,
-            digimon_adapter=digimon_adapter,
+            FakePokemonAdapter(),
+            digimon_adapter,
+            FakeJankenService(),
             logger=logger,
         )
 
@@ -341,7 +372,9 @@ class TestMessageRouterChatGPTRoute:
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=None,
+            pokemon_adapter=FakePokemonAdapter(),
+            digimon_adapter=FakeDigimonAdapter(),
+            janken_service=FakeJankenService(),
             logger=logger,
         )
 
@@ -366,7 +399,9 @@ class TestMessageRouterUnmatchedMessage:
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=None,
+            pokemon_adapter=FakePokemonAdapter(),
+            digimon_adapter=FakeDigimonAdapter(),
+            janken_service=FakeJankenService(),
             logger=logger,
         )
 
@@ -390,7 +425,9 @@ class TestMessageRouterUnmatchedMessage:
             line_adapter,
             openai_adapter,
             weather_adapter,
-            pokemon_adapter=None,
+            pokemon_adapter=FakePokemonAdapter(),
+            digimon_adapter=FakeDigimonAdapter(),
+            janken_service=FakeJankenService(),
             logger=logger,
         )
 

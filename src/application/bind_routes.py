@@ -36,10 +36,13 @@ def bind_routes(
 
     register_routes(app, handler, _line_adapter)
 
+    from ..domain.services.janken_game_master_service import JankenGameMasterService
+
     _openai_holder: dict = {"client": None}
     _weather_adapter = WeatherAdapter()
     _pokemon_adapter = PokemonApiAdapter()
     _digimon_adapter = DigimonApiAdapter(logger=adapter_logger)
+    _janken_service = JankenGameMasterService()
 
     def _get_openai_client():
         if _openai_holder["client"] is None:
@@ -53,14 +56,15 @@ def bind_routes(
         _weather_adapter,
         _pokemon_adapter,
         _digimon_adapter,
+        _janken_service,
         logger=adapter_logger,
     )
 
     postback_router_instance = PostbackRouter(
         _line_adapter,
-        openai_adapter=_get_openai_client(),
+        _get_openai_client(),
+        _janken_service,
         logger=adapter_logger,
-        janken_service=message_router_instance.janken_service,
     )
 
     handler.add(MessageEvent)(message_router_instance.route_message)

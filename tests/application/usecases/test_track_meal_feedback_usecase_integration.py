@@ -148,7 +148,9 @@ def test_execute_multiple_feedbacks():
     for idx, (request_id, score) in enumerate(test_cases):
         event = FakeEvent()
         event.reply_token = f"token_{idx}"
-        result = usecase.execute(event, postback_data=f"meal_feedback:{request_id}:{score}")
+        result = usecase.execute(
+            event, postback_data=f"meal_feedback:{request_id}:{score}"
+        )
         assert result is True
 
     assert mock_openai_adapter.track_score.call_count == 3

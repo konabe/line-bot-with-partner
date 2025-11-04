@@ -13,12 +13,44 @@ class FakeLineAdapter:
 
     def __init__(self):
         self.reply_message_calls = []
+        self.push_message_calls = []
 
     def reply_message(self, req):
         self.reply_message_calls.append(req)
 
+    def push_message(self, req):
+        self.push_message_calls.append(req)
+        return True
+
     def get_display_name_from_line_profile(self, user_id: str) -> str:
         return "TestUser"
+
+
+class FakeOpenAIAdapter:
+    """テスト用 OpenAI アダプタ"""
+
+    def __init__(self):
+        self.track_score_calls = []
+
+    def get_chatgpt_response(self, user_message: str) -> str:
+        return "AI response"
+
+    def generate_image(self, prompt: str) -> str:
+        return "https://example.com/image.png"
+
+    def generate_image_prompt(self, requirements: str) -> str:
+        return "A detailed image prompt"
+
+    def get_chatgpt_meal_suggestion(self, return_request_id: bool = False):
+        if return_request_id:
+            return "Meal suggestion", 12345
+        return "Meal suggestion"
+
+    def track_score(
+        self, request_id: int, score: int, score_name: str = "user_feedback"
+    ) -> bool:
+        self.track_score_calls.append((request_id, score, score_name))
+        return True
 
 
 class FakeJankenService:
@@ -27,9 +59,9 @@ class FakeJankenService:
     def __init__(self):
         self.play_and_make_reply_calls = []
 
-    def play_and_make_reply(self, user_hand: str, user_label: str) -> str:
-        self.play_and_make_reply_calls.append((user_hand, user_label))
-        return f"{user_label}: {user_hand}\nBot: ✌️\n結果: あなたの勝ち！"
+    def play_and_make_reply(self, user_hand_input: str, user_label: str) -> str:
+        self.play_and_make_reply_calls.append((user_hand_input, user_label))
+        return f"{user_label}: {user_hand_input}\nBot: ✌️\n結果: あなたの勝ち！"
 
 
 class FakeLogger:
@@ -86,11 +118,12 @@ class TestPostbackRouterEventHandling:
     def test_route_postback_with_none_event_logs_error_and_returns(self):
         """event=None の場合、エラーログを出して早期リターンすること"""
         line_adapter = FakeLineAdapter()
+        openai_adapter = FakeOpenAIAdapter()
         janken_service = FakeJankenService()
         logger = FakeLogger()
 
         router = PostbackRouter(
-            line_adapter, logger=logger, janken_service=janken_service
+            line_adapter, openai_adapter, janken_service, logger=logger
         )
 
         # event=None で呼び出し
@@ -111,7 +144,7 @@ class TestPostbackRouterEventHandling:
         logger = FakeLogger()
 
         router = PostbackRouter(
-            line_adapter, logger=logger, janken_service=janken_service
+            line_adapter, FakeOpenAIAdapter(), janken_service, logger=logger
         )
 
         event = _make_postback_event("janken:✊")
@@ -133,7 +166,7 @@ class TestPostbackRouterJankenHandling:
         logger = FakeLogger()
 
         router = PostbackRouter(
-            line_adapter, logger=logger, janken_service=janken_service
+            line_adapter, FakeOpenAIAdapter(), janken_service, logger=logger
         )
 
         event = _make_postback_event("janken:✊")
@@ -150,7 +183,7 @@ class TestPostbackRouterJankenHandling:
         logger = FakeLogger()
 
         router = PostbackRouter(
-            line_adapter, logger=logger, janken_service=janken_service
+            line_adapter, FakeOpenAIAdapter(), janken_service, logger=logger
         )
 
         event = _make_postback_event("janken:✌️")
@@ -167,7 +200,7 @@ class TestPostbackRouterJankenHandling:
         logger = FakeLogger()
 
         router = PostbackRouter(
-            line_adapter, logger=logger, janken_service=janken_service
+            line_adapter, FakeOpenAIAdapter(), janken_service, logger=logger
         )
 
         event = _make_postback_event("janken:✋")
@@ -188,7 +221,7 @@ class TestPostbackRouterNoneData:
         logger = FakeLogger()
 
         router = PostbackRouter(
-            line_adapter, logger=logger, janken_service=janken_service
+            line_adapter, FakeOpenAIAdapter(), janken_service, logger=logger
         )
 
         event = _make_postback_event(None)
@@ -210,7 +243,7 @@ class TestPostbackRouterUnmatchedData:
         logger = FakeLogger()
 
         router = PostbackRouter(
-            line_adapter, logger=logger, janken_service=janken_service
+            line_adapter, FakeOpenAIAdapter(), janken_service, logger=logger
         )
 
         event = _make_postback_event("other:action")
@@ -242,7 +275,7 @@ class TestPostbackRouterMealFeedbackHandling:
         logger = FakeLogger()
 
         router = PostbackRouter(
-            line_adapter, openai_adapter=openai_adapter, logger=logger
+            line_adapter, openai_adapter, FakeJankenService(), logger=logger
         )
 
         event = _make_postback_event("meal_feedback:12345:100")
@@ -255,20 +288,3 @@ class TestPostbackRouterMealFeedbackHandling:
 
         # 感謝メッセージが送信されていることを確認
         assert len(line_adapter.reply_message_calls) == 1
-
-    def test_route_meal_feedback_postback_without_openai_adapter(self):
-        """openai_adapter が None の場合、警告ログを出して処理をスキップすること"""
-        line_adapter = FakeLineAdapter()
-        logger = FakeLogger()
-
-        router = PostbackRouter(
-            line_adapter, openai_adapter=None, logger=logger
-        )
-
-        event = _make_postback_event("meal_feedback:12345:100")
-        router.route_postback(cast(PostbackEventLike, event))
-
-        # 警告ログが出ていることを確認
-        assert any("openai_adapter not set" in log for log in logger.warning_logs)
-        # LINE adapter が呼ばれていないことを確認
-        assert len(line_adapter.reply_message_calls) == 0

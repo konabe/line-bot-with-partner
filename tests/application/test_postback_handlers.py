@@ -21,7 +21,7 @@ class FakeLineAdapter:
         self.reply_message = fn
         self.push_message = fn  # MessageRouterで必要
         self.get_display_name_from_line_profile = display_name_provider or (
-            lambda uid: "Alice"
+            lambda user_id: "Alice"
         )
 
 
@@ -85,11 +85,27 @@ def test_handle_postback_success(monkeypatch):
         def exception(self, msg):
             pass
 
-    # MessageRouterではNoneでも問題ない（postbackでは使用しない）
+    class FakeOpenAI:
+        def get_chatgpt_response(self, user_message: str) -> str:
+            return ""
+
+        def generate_image(self, prompt: str):
+            return None
+
+        def generate_image_prompt(self, requirements: str) -> str:
+            return ""
+
+        def get_chatgpt_meal_suggestion(self, return_request_id: bool = False):
+            return ""
+
+        def track_score(self, request_id: int, score: int, score_name: str = "user_feedback") -> bool:
+            return True
+
     router = PostbackRouter(
         FakeLineAdapter(fake_safe_reply),
+        FakeOpenAI(),  # type: ignore
+        FakeService(),  # type: ignore
         logger=_FakeLogger(),
-        janken_service=FakeService(),  # type: ignore
     )
     router.route_postback(cast(PostbackEventLike, event))
 
@@ -137,10 +153,27 @@ def test_handle_postback_invalid_hand(monkeypatch):
         def exception(self, msg):
             pass
 
+    class FakeOpenAI:
+        def get_chatgpt_response(self, user_message: str) -> str:
+            return ""
+
+        def generate_image(self, prompt: str):
+            return None
+
+        def generate_image_prompt(self, requirements: str) -> str:
+            return ""
+
+        def get_chatgpt_meal_suggestion(self, return_request_id: bool = False):
+            return ""
+
+        def track_score(self, request_id: int, score: int, score_name: str = "user_feedback") -> bool:
+            return True
+
     router = PostbackRouter(
         FakeLineAdapter(fake_safe_reply),
+        FakeOpenAI(),  # type: ignore
+        FakeServiceErr(),  # type: ignore
         logger=_FakeLogger(),
-        janken_service=FakeServiceErr(),  # type: ignore
     )
     router.route_postback(cast(PostbackEventLike, event))
 
@@ -192,11 +225,28 @@ def test_handle_postback_non_janken(monkeypatch):
         def exception(self, msg):
             pass
 
+    class FakeOpenAI:
+        def get_chatgpt_response(self, user_message: str) -> str:
+            return ""
+
+        def generate_image(self, prompt: str):
+            return None
+
+        def generate_image_prompt(self, requirements: str) -> str:
+            return ""
+
+        def get_chatgpt_meal_suggestion(self, return_request_id: bool = False):
+            return ""
+
+        def track_score(self, request_id: int, score: int, score_name: str = "user_feedback") -> bool:
+            return True
+
     # Pass a fake service instance but it should not be used
     router = PostbackRouter(
         FakeLineAdapter(fake_safe_reply),
+        FakeOpenAI(),  # type: ignore
+        FakeService(),  # type: ignore
         logger=_FakeLogger(),
-        janken_service=FakeService(),  # type: ignore
     )
     router.route_postback(cast(PostbackEventLike, event))
 

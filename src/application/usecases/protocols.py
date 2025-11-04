@@ -41,3 +41,13 @@ class WeatherAdapterProtocol(Protocol):
 class DigimonAdapterProtocol(Protocol):
     def get_random_digimon_info(self) -> Any:
         ...
+
+
+class PokemonAdapterProtocol(Protocol):
+    def get_random_pokemon_info(self) -> Any:
+        ...
+
+
+class JankenServiceProtocol(Protocol):
+    def play_and_make_reply(self, user_hand_input: str, user_label: str) -> str:
+        ...

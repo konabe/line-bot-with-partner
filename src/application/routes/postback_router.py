@@ -1,8 +1,12 @@
 from typing import Optional
 
-from ...domain.services.janken_game_master_service import JankenGameMasterService
 from ...infrastructure.logger import Logger, create_logger
 from ..types import PostbackEventLike
+from ..usecases.protocols import (
+    JankenServiceProtocol,
+    LineAdapterProtocol,
+    OpenAIAdapterProtocol,
+)
 from ..usecases.start_janken_game_usecase import StartJankenGameUsecase
 from ..usecases.track_meal_feedback_usecase import TrackMealFeedbackUsecase
 
@@ -10,15 +14,15 @@ from ..usecases.track_meal_feedback_usecase import TrackMealFeedbackUsecase
 class PostbackRouter:
     def __init__(
         self,
-        line_adapter,
-        openai_adapter=None,
+        line_adapter: LineAdapterProtocol,
+        openai_adapter: OpenAIAdapterProtocol,
+        janken_service: JankenServiceProtocol,
         logger: Optional[Logger] = None,
-        janken_service: Optional[JankenGameMasterService] = None,
     ):
         self.line_adapter = line_adapter
         self.openai_adapter = openai_adapter
         self.logger = logger or create_logger(__name__)
-        self.janken_service = janken_service or JankenGameMasterService()
+        self.janken_service = janken_service
 
     def route_postback(self, *args, **kwargs) -> None:
         # Be permissive about calling convention: webhook handler may call
@@ -61,10 +65,6 @@ class PostbackRouter:
     def _route_meal_feedback_postback(
         self, event: PostbackEventLike, data: str
     ) -> None:
-        if self.openai_adapter is None:
-            self.logger.warning("openai_adapter not set, cannot track score")
-            return
-
         usecase = TrackMealFeedbackUsecase(
             line_adapter=self.line_adapter,
             openai_adapter=self.openai_adapter,

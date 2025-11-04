@@ -2,21 +2,20 @@ from typing import Optional
 
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 
-from ...domain.services.janken_game_master_service import JankenGameMasterService
 from ...infrastructure.logger import Logger, create_logger
 from ..types import PostbackEventLike
-from .protocols import LineAdapterProtocol
+from .protocols import JankenServiceProtocol, LineAdapterProtocol
 
 
 class StartJankenGameUsecase:
     def __init__(
         self,
         line_adapter: LineAdapterProtocol,
-        janken_service: Optional[JankenGameMasterService] = None,
+        janken_service: JankenServiceProtocol,
         logger: Optional[Logger] = None,
     ):
         self._line_adapter = line_adapter
-        self._janken_service = janken_service or JankenGameMasterService()
+        self._janken_service = janken_service
         self._logger: Logger = logger or create_logger(__name__)
 
     def execute(self, event: PostbackEventLike) -> None:

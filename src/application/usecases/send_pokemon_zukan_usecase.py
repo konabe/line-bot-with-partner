@@ -4,13 +4,15 @@ from ...infrastructure.line_model.zukan_button_template import (
     create_pokemon_zukan_button_template,
 )
 from ...infrastructure.logger import create_logger
-from .protocols import LineAdapterProtocol
+from .protocols import LineAdapterProtocol, PokemonAdapterProtocol
 
 logger = create_logger(__name__)
 
 
 class SendPokemonZukanUsecase:
-    def __init__(self, line_adapter: LineAdapterProtocol, pokemon_adapter: Any):
+    def __init__(
+        self, line_adapter: LineAdapterProtocol, pokemon_adapter: PokemonAdapterProtocol
+    ):
         self.line_adapter = line_adapter
         self.pokemon_adapter = pokemon_adapter
 
