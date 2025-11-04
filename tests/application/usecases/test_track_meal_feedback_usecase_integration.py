@@ -22,7 +22,7 @@ def test_execute_with_successful_score_tracking():
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
     event = FakeEvent()
 
-    result = usecase.execute(event, pl_request_id=12345, score=100)
+    result = usecase.execute(event, postback_data="meal_feedback:12345:100")
 
     assert result is True
     mock_openai_adapter.track_score.assert_called_once_with(
@@ -48,7 +48,7 @@ def test_execute_with_failed_score_tracking():
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
     event = FakeEvent()
 
-    result = usecase.execute(event, pl_request_id=12345, score=50)
+    result = usecase.execute(event, postback_data="meal_feedback:12345:50")
 
     assert result is False
     mock_openai_adapter.track_score.assert_called_once_with(
@@ -71,7 +71,7 @@ def test_execute_with_good_score():
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
     event = FakeEvent()
 
-    result = usecase.execute(event, pl_request_id=99999, score=100)
+    result = usecase.execute(event, postback_data="meal_feedback:99999:100")
 
     assert result is True
     mock_openai_adapter.track_score.assert_called_once_with(
@@ -88,7 +88,7 @@ def test_execute_with_normal_score():
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
     event = FakeEvent()
 
-    result = usecase.execute(event, pl_request_id=88888, score=50)
+    result = usecase.execute(event, postback_data="meal_feedback:88888:50")
 
     assert result is True
     mock_openai_adapter.track_score.assert_called_once_with(
@@ -105,7 +105,7 @@ def test_execute_with_bad_score():
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
     event = FakeEvent()
 
-    result = usecase.execute(event, pl_request_id=77777, score=0)
+    result = usecase.execute(event, postback_data="meal_feedback:77777:0")
 
     assert result is True
     mock_openai_adapter.track_score.assert_called_once_with(
@@ -124,7 +124,7 @@ def test_execute_with_track_score_exception():
 
     exception_raised = False
     try:
-        usecase.execute(event, pl_request_id=12345, score=100)
+        usecase.execute(event, postback_data="meal_feedback:12345:100")
     except RuntimeError:
         exception_raised = True
 
@@ -148,7 +148,7 @@ def test_execute_multiple_feedbacks():
     for idx, (request_id, score) in enumerate(test_cases):
         event = FakeEvent()
         event.reply_token = f"token_{idx}"
-        result = usecase.execute(event, pl_request_id=request_id, score=score)
+        result = usecase.execute(event, postback_data=f"meal_feedback:{request_id}:{score}")
         assert result is True
 
     assert mock_openai_adapter.track_score.call_count == 3

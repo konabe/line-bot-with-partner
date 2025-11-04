@@ -61,34 +61,16 @@ class PostbackRouter:
     def _route_meal_feedback_postback(
         self, event: PostbackEventLike, data: str
     ) -> None:
-        # data format: "meal_feedback:{pl_request_id}:{score}"
-        parts = data.split(":")
-        if len(parts) != 3:
-            self.logger.warning(f"Invalid meal_feedback data format: {data}")
-            return
-
-        try:
-            pl_request_id = int(parts[1])
-            score = int(parts[2])
-        except ValueError:
-            self.logger.warning(f"Invalid meal_feedback data values: {data}")
-            return
-
         if self.openai_adapter is None:
             self.logger.warning("openai_adapter not set, cannot track score")
             return
 
-        # Usecaseを使ってフィードバックを送信
         usecase = TrackMealFeedbackUsecase(
             line_adapter=self.line_adapter,
             openai_adapter=self.openai_adapter,
+            logger=self.logger,
         )
-        success = usecase.execute(event, pl_request_id, score)
-
-        if success:
-            self.logger.info(f"Successfully tracked meal feedback: score={score}")
-        else:
-            self.logger.warning(f"Failed to track meal feedback: score={score}")
+        usecase.execute(event, data)
 
     def _route_janken_postback(self, event: PostbackEventLike) -> None:
         StartJankenGameUsecase(

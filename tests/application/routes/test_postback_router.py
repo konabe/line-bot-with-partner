@@ -37,13 +37,25 @@ class FakeLogger:
 
     def __init__(self):
         self.debug_logs = []
+        self.info_logs = []
+        self.warning_logs = []
         self.error_logs = []
+        self.exception_logs = []
 
     def debug(self, msg, *args):
         self.debug_logs.append(msg)
 
+    def info(self, msg, *args):
+        self.info_logs.append(msg)
+
+    def warning(self, msg, *args):
+        self.warning_logs.append(msg)
+
     def error(self, msg, *args):
         self.error_logs.append(msg)
+
+    def exception(self, msg, *args):
+        self.exception_logs.append(msg)
 
 
 def _make_postback_event(data: str | None, user_id: str = "U123"):
@@ -206,4 +218,57 @@ class TestPostbackRouterUnmatchedData:
 
         # じゃんけんサービスが呼ばれていないことを確認
         assert len(janken_service.play_and_make_reply_calls) == 0
+        assert len(line_adapter.reply_message_calls) == 0
+
+
+class TestPostbackRouterMealFeedbackHandling:
+    """料理評価ポストバック処理のテスト"""
+
+    def test_route_meal_feedback_postback_success(self):
+        """meal_feedback: のポストバックが正常に処理されること"""
+
+        class FakeOpenAIAdapter:
+            def __init__(self):
+                self.track_score_calls = []
+
+            def track_score(self, request_id: int, score: int, score_name: str = "user_feedback") -> bool:
+                self.track_score_calls.append(
+                    {"request_id": request_id, "score": score, "score_name": score_name}
+                )
+                return True
+
+        line_adapter = FakeLineAdapter()
+        openai_adapter = FakeOpenAIAdapter()
+        logger = FakeLogger()
+
+        router = PostbackRouter(
+            line_adapter, openai_adapter=openai_adapter, logger=logger
+        )
+
+        event = _make_postback_event("meal_feedback:12345:100")
+        router.route_postback(cast(PostbackEventLike, event))
+
+        # OpenAI adapter が呼ばれていることを確認
+        assert len(openai_adapter.track_score_calls) == 1
+        assert openai_adapter.track_score_calls[0]["request_id"] == 12345
+        assert openai_adapter.track_score_calls[0]["score"] == 100
+
+        # 感謝メッセージが送信されていることを確認
+        assert len(line_adapter.reply_message_calls) == 1
+
+    def test_route_meal_feedback_postback_without_openai_adapter(self):
+        """openai_adapter が None の場合、警告ログを出して処理をスキップすること"""
+        line_adapter = FakeLineAdapter()
+        logger = FakeLogger()
+
+        router = PostbackRouter(
+            line_adapter, openai_adapter=None, logger=logger
+        )
+
+        event = _make_postback_event("meal_feedback:12345:100")
+        router.route_postback(cast(PostbackEventLike, event))
+
+        # 警告ログが出ていることを確認
+        assert any("openai_adapter not set" in log for log in logger.warning_logs)
+        # LINE adapter が呼ばれていないことを確認
         assert len(line_adapter.reply_message_calls) == 0
