@@ -1,4 +1,4 @@
-"""SendDigimonUsecase のテスト"""
+from unittest.mock import Mock
 
 from src.application.usecases.send_digimon_usecase import SendDigimonUsecase
 from src.domain.models.digimon_info import DigimonInfo
@@ -29,22 +29,14 @@ class FakeDigimonAdapter:
 
 
 def _make_message_event(text: str = "デジモン", user_id: str = "U123"):
-    class FakeMessage:
-        def __init__(self, text: str):
-            self.text = text
-            self.type = "text"
-
-    class FakeSource:
-        def __init__(self, user_id: str):
-            self.user_id = user_id
-
-    class FakeEvent:
-        def __init__(self, text: str, user_id: str):
-            self.message = FakeMessage(text)
-            self.source = FakeSource(user_id)
-            self.reply_token = "fake_reply_token"
-
-    return FakeEvent(text, user_id)
+    event = Mock()
+    event.reply_token = "fake_reply_token"
+    event.message = Mock()
+    event.message.text = text
+    event.message.type = "text"
+    event.source = Mock()
+    event.source.user_id = user_id
+    return event
 
 
 class TestSendDigimonUsecase:

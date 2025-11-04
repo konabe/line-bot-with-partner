@@ -1,23 +1,30 @@
-from typing import Any
+from typing import Optional
 
+from linebot.v3.messaging import models
+from linebot.v3.messaging.models import ReplyMessageRequest, TemplateMessage, TextMessage
+from linebot.v3.webhooks.models.message_event import MessageEvent
+
+from ...domain.models.digimon_info import DigimonInfo
 from ...infrastructure.line_model.digimon_button_template import (
     create_digimon_zukan_button_template,
 )
-from ...infrastructure.logger import create_logger
+from ...infrastructure.logger import Logger, create_logger
 from .protocols import DigimonAdapterProtocol, LineAdapterProtocol
-
-logger = create_logger(__name__)
 
 
 class SendDigimonUsecase:
     def __init__(
-        self, line_adapter: LineAdapterProtocol, digimon_adapter: DigimonAdapterProtocol
+        self,
+        line_adapter: LineAdapterProtocol,
+        digimon_adapter: DigimonAdapterProtocol,
+        logger: Optional[Logger] = None,
     ):
         self.line_adapter = line_adapter
         self.digimon_adapter = digimon_adapter
+        self._logger = logger or create_logger(__name__)
 
-    def execute(self, event: Any) -> None:
-        logger.info("デジモンリクエスト受信。図鑑風情報を返信")
+    def execute(self, event: MessageEvent) -> None:
+        self._logger.info("デジモンリクエスト受信。図鑑風情報を返信")
 
         info = self.digimon_adapter.get_random_digimon_info()
         if not info:
@@ -26,23 +33,29 @@ class SendDigimonUsecase:
 
         self._send_digimon_zukan_message(event, info)
 
-    def _send_digimon_zukan_message(self, event: Any, info: Any) -> None:
+    def _send_digimon_zukan_message(
+        self, event: MessageEvent, info: DigimonInfo
+    ) -> None:
         try:
             candidate = create_digimon_zukan_button_template(info)
             self._send_line_message(event, candidate)
 
         except Exception as e:
-            logger.error(f"デジモンメッセージ送信エラー: {e}")
+            self._logger.error(f"デジモンメッセージ送信エラー: {e}")
             self._send_error_message(event)
 
-    def _send_line_message(self, event: Any, candidate: Any) -> None:
+    def _send_line_message(
+        self, event: MessageEvent, candidate: TemplateMessage
+    ) -> None:
+        if not event.reply_token:
+            self._logger.warning("reply_tokenが存在しないため、応答をスキップします")
+            return
+
         try:
             if hasattr(candidate, "dict") and candidate.__class__.__name__ in (
                 "TextMessage",
                 "TemplateMessage",
             ):
-                from linebot.v3.messaging.models import ReplyMessageRequest
-
                 reply_message_request = ReplyMessageRequest(
                     replyToken=event.reply_token,
                     messages=[candidate],
@@ -51,19 +64,19 @@ class SendDigimonUsecase:
                 self.line_adapter.reply_message(reply_message_request)
                 return
 
-            from linebot.v3.messaging import models
-
             sdk_req = models.ReplyMessageRequest.parse_obj(
                 {"replyToken": event.reply_token, "messages": [candidate]}
             )
             self.line_adapter.reply_message(sdk_req)
 
         except Exception as e:
-            logger.error(f"LINE メッセージ送信エラー: {e}")
+            self._logger.error(f"LINE メッセージ送信エラー: {e}")
             raise
 
-    def _send_error_message(self, event: Any) -> None:
-        from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+    def _send_error_message(self, event: MessageEvent) -> None:
+        if not event.reply_token:
+            self._logger.warning("reply_tokenが存在しないため、応答をスキップします")
+            return
 
         reply_message_request = ReplyMessageRequest(
             replyToken=event.reply_token,
