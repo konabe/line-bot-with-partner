@@ -378,3 +378,42 @@ class TestMessageRouterUnmatchedMessage:
         assert len(openai_adapter.get_chatgpt_response_calls) == 0
         assert len(openai_adapter.get_chatgpt_meal_suggestion_calls) == 0
         assert len(weather_adapter.get_weather_text_calls) == 0
+
+    def test_none_text_message_is_ignored(self):
+        """text が None の場合（スタンプなど）は処理をスキップすること"""
+        line_adapter = FakeLineAdapter()
+        openai_adapter = FakeOpenAIAdapter()
+        weather_adapter = FakeWeatherAdapter()
+        logger = FakeLogger()
+
+        router = MessageRouter(
+            line_adapter,
+            openai_adapter,
+            weather_adapter,
+            pokemon_adapter=None,
+            logger=logger,
+        )
+
+        class FakeStampEvent:
+            def __init__(self):
+                self.reply_token = "stamp_reply_token"
+                self.message = FakeMessage()
+                self.source = FakeSource()
+                self.type = "message"
+
+        class FakeMessage:
+            def __init__(self):
+                self.text = None
+
+        class FakeSource:
+            def __init__(self):
+                self.user_id = "U123456"
+
+        event = FakeStampEvent()
+        router.route_message(event)
+
+        # どのアダプタも呼ばれないことを確認
+        assert len(line_adapter.reply_message_calls) == 0
+        assert len(openai_adapter.get_chatgpt_response_calls) == 0
+        assert len(openai_adapter.get_chatgpt_meal_suggestion_calls) == 0
+        assert len(weather_adapter.get_weather_text_calls) == 0

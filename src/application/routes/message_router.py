@@ -77,6 +77,10 @@ class MessageRouter:
 
         logger.debug(f"route_message called. text: {text}")
 
+        if text is None:
+            logger.debug("text is None (スタンプなど), 処理をスキップ")
+            return
+
         t = (text or "").strip()
 
         if "天気" in text:
