@@ -264,7 +264,9 @@ class TestPostbackRouterMealFeedbackHandling:
             def __init__(self):
                 self.track_score_calls = []
 
-            def track_score(self, request_id: int, score: int, score_name: str = "user_feedback") -> bool:
+            def track_score(
+                self, request_id: int, score: int, score_name: str = "user_feedback"
+            ) -> bool:
                 self.track_score_calls.append(
                     {"request_id": request_id, "score": score, "score_name": score_name}
                 )

@@ -59,7 +59,9 @@ def test_handle_postback_success(monkeypatch):
             FakeService.instantiated_count += 1
 
         def play_and_make_reply(self, user_hand_input: str, user_label: str) -> str:
-            return f"{user_label}: {user_hand_input}\n" f"Bot: ✌️\n" f"結果: あなたの勝ち！"
+            return (
+                f"{user_label}: {user_hand_input}\n" f"Bot: ✌️\n" f"結果: あなたの勝ち！"
+            )
 
     sent = []
 
@@ -98,7 +100,9 @@ def test_handle_postback_success(monkeypatch):
         def get_chatgpt_meal_suggestion(self, return_request_id: bool = False):
             return ""
 
-        def track_score(self, request_id: int, score: int, score_name: str = "user_feedback") -> bool:
+        def track_score(
+            self, request_id: int, score: int, score_name: str = "user_feedback"
+        ) -> bool:
             return True
 
     router = PostbackRouter(
@@ -166,7 +170,9 @@ def test_handle_postback_invalid_hand(monkeypatch):
         def get_chatgpt_meal_suggestion(self, return_request_id: bool = False):
             return ""
 
-        def track_score(self, request_id: int, score: int, score_name: str = "user_feedback") -> bool:
+        def track_score(
+            self, request_id: int, score: int, score_name: str = "user_feedback"
+        ) -> bool:
             return True
 
     router = PostbackRouter(
@@ -238,7 +244,9 @@ def test_handle_postback_non_janken(monkeypatch):
         def get_chatgpt_meal_suggestion(self, return_request_id: bool = False):
             return ""
 
-        def track_score(self, request_id: int, score: int, score_name: str = "user_feedback") -> bool:
+        def track_score(
+            self, request_id: int, score: int, score_name: str = "user_feedback"
+        ) -> bool:
             return True
 
     # Pass a fake service instance but it should not be used

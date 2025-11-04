@@ -9,7 +9,7 @@
       "approve": true,
       "matchCommandLine": true
     },
-    "git commit": {
+    "git commit -m": {
       "approve": true,
       "matchCommandLine": true
     },
@@ -17,7 +17,14 @@
       "approve": true,
       "matchCommandLine": true
     },
-    "git status": true,
+    "git status": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "PYTHONPATH=. pytest": {
+      "approve": true,
+      "matchCommandLine": true
+    },
     "mv": true,
     "python": true,
     "gh": true,
