@@ -1,6 +1,7 @@
-from typing import Any, Optional
+from typing import Optional
 
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from ...infrastructure.logger import Logger, create_logger
 from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
@@ -17,13 +18,17 @@ class SendChatResponseUsecase:
         self._openai_adapter = openai_adapter
         self._logger = logger or create_logger(__name__)
 
-    def execute(self, event: Any, user_message: str) -> None:
+    def execute(self, event: MessageEvent, user_message: str) -> None:
         """ChatGPTからの応答を取得してLINEに返信する
 
         Args:
-            event: LINEイベント
+            event: LINEメッセージイベント
             user_message: ユーザーからのメッセージ
         """
+        if not event.reply_token:
+            self._logger.warning("reply_tokenが存在しないため、応答をスキップします")
+            return
+
         try:
             response_text = self._get_response(user_message)
             self._send_reply(event.reply_token, response_text)
