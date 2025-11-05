@@ -11,54 +11,45 @@ class SendStartupNotificationUsecase:
     def __init__(
         self, line_adapter: LineAdapterProtocol, logger: Optional[Logger] = None
     ):
-        self.line_adapter = line_adapter
-        self.logger = logger or create_logger(__name__)
+        self._line_adapter = line_adapter
+        self._logger = logger or create_logger(__name__)
 
     def execute(self) -> bool:
-        """起動通知を送信する
-
-        ADMIN_USER_IDが設定されている場合、管理者に起動通知を送信します。
-
-        Returns:
-            bool: 通知が試行され成功した場合はTrue、そうでない場合はFalse
-        """
-        admin_id = os.environ.get("ADMIN_USER_ID")
+        admin_id = self._get_admin_user_id()
         if not admin_id:
-            self.logger.debug("ADMIN_USER_ID not set; skipping startup notification")
+            self._logger.debug("ADMIN_USER_ID not set; skipping startup notification")
             return False
 
-        message_text = os.environ.get("ADMIN_STARTUP_MESSAGE", "サーバーが起動しました。")
+        message_text = self._get_startup_message()
 
         try:
-            # PushMessageRequestを作成
-            push_message_request = PushMessageRequest(
-                to=admin_id,
-                messages=[
-                    TextMessage(text=message_text, quickReply=None, quoteToken=None)
-                ],
-                notificationDisabled=False,
-                customAggregationUnits=None,
-            )
-
-            # メッセージ送信
-            success = self.line_adapter.push_message(push_message_request)
-
-            # 結果処理（後方互換性のためNoneの場合はTrueとして扱う）
-            if success is None:
-                success = True
-
-            if success:
-                self.logger.info(f"startup notification sent to admin {admin_id}")
-                return True
-            else:
-                self.logger.error(
-                    f"failed to send startup notification to admin {admin_id}"
-                )
-                return False
-
+            self._send_push_message(admin_id, message_text)
+            self._logger.info(f"startup notification sent to admin {admin_id}")
+            return True
         except Exception as exc:
-            self.logger.error(f"startup notification failed with exception: {exc}")
+            self._logger.error(f"startup notification failed with exception: {exc}")
             return False
+
+    def _get_admin_user_id(self) -> Optional[str]:
+        return os.environ.get("ADMIN_USER_ID")
+
+    def _get_startup_message(self) -> str:
+        return os.environ.get("ADMIN_STARTUP_MESSAGE", "サーバーが起動しました。")
+
+    def _send_push_message(self, admin_id: str, message_text: str) -> None:
+        push_message_request = PushMessageRequest(
+            to=admin_id,
+            messages=[TextMessage(text=message_text, quickReply=None, quoteToken=None)],
+            notificationDisabled=False,
+            customAggregationUnits=None,
+        )
+
+        result = self._line_adapter.push_message(push_message_request)
+
+        if result is False:
+            raise RuntimeError(
+                f"failed to send startup notification to admin {admin_id}"
+            )
 
 
 __all__ = ["SendStartupNotificationUsecase"]

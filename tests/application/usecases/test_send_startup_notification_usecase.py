@@ -91,9 +91,11 @@ def test_send_startup_notification_failure(monkeypatch):
 
     # 検証
     assert result is False
-    mock_logger.error.assert_called_once_with(
-        "failed to send startup notification to admin test_admin_id"
-    )
+    # エラーメッセージには例外のメッセージが含まれる
+    mock_logger.error.assert_called_once()
+    error_message = mock_logger.error.call_args[0][0]
+    assert "startup notification failed with exception" in error_message
+    assert "failed to send startup notification to admin test_admin_id" in error_message
 
 
 def test_send_startup_notification_exception(monkeypatch):
