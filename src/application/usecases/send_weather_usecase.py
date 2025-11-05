@@ -1,4 +1,9 @@
+import os
+import re
+from typing import Optional
+
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
+from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from .protocols import LineAdapterProtocol, WeatherAdapterProtocol
 
@@ -10,49 +15,57 @@ class SendWeatherUsecase:
         self._line_adapter = line_adapter
         self._weather_adapter = weather_adapter
 
-    def _extract_location_from_weather_query(self, text: str) -> str:
-        import re
+    def execute(self, event: MessageEvent, text: str) -> None:
+        if not event.reply_token:
+            return
 
-        match = re.search(r"(.+?)の天気", text)
-        if match:
-            return match.group(1).strip()
-        return ""
+        reply_text = self._get_weather_reply_text(text)
+        self._send_reply(event.reply_token, reply_text)
 
-    def execute(self, event, text: str) -> None:
+    def _get_weather_reply_text(self, text: str) -> str:
         t = text.strip()
 
         if t == "天気":
-            import os
-
-            cfg = os.environ.get("WEATHER_LOCATIONS")
-            if not cfg:
-                reply_text = (
-                    "表示する都市が設定されていません。環境変数 WEATHER_LOCATIONS にカンマ区切りの都市名を設定してください。"
-                )
-            else:
-                # カンマまたは改行・空白で区切られている想定
-                parts = [
-                    p.strip() for p in cfg.replace("\n", ",").split(",") if p.strip()
-                ]
-                if not parts:
-                    reply_text = (
-                        "表示する都市が設定されていません。環境変数 WEATHER_LOCATIONS にカンマ区切りの都市名を設定してください。"
-                    )
-                else:
-                    texts = []
-                    for city in parts:
-                        texts.append(self._weather_adapter.get_weather_text(city))
-                    reply_text = "\n\n".join(texts)
+            return self._get_multiple_cities_weather()
         else:
-            loc = self._extract_location_from_weather_query(text)
-            if loc:
-                reply_text = self._weather_adapter.get_weather_text(loc)
-            else:
-                reply_text = self._weather_adapter.get_weather_text("東京")
+            location = self._extract_location_from_weather_query(text)
+            return self._get_single_city_weather(location)
 
+    def _get_multiple_cities_weather(self) -> str:
+        weather_locations = os.environ.get("WEATHER_LOCATIONS")
+        if not weather_locations:
+            return "表示する都市が設定されていません。環境変数 WEATHER_LOCATIONS にカンマ区切りの都市名を設定してください。"
+
+        cities = self._parse_weather_locations(weather_locations)
+        if not cities:
+            return "表示する都市が設定されていません。環境変数 WEATHER_LOCATIONS にカンマ区切りの都市名を設定してください。"
+
+        weather_texts = [
+            self._weather_adapter.get_weather_text(city) for city in cities
+        ]
+        return "\n\n".join(weather_texts)
+
+    def _parse_weather_locations(self, weather_locations: str) -> list[str]:
+        return [
+            city.strip()
+            for city in weather_locations.replace("\n", ",").split(",")
+            if city.strip()
+        ]
+
+    def _get_single_city_weather(self, location: Optional[str]) -> str:
+        city = location if location else "東京"
+        return self._weather_adapter.get_weather_text(city)
+
+    def _extract_location_from_weather_query(self, text: str) -> Optional[str]:
+        match = re.search(r"(.+?)の天気", text)
+        if match:
+            return match.group(1).strip()
+        return None
+
+    def _send_reply(self, reply_token: str, message: str) -> None:
         reply_message_request = ReplyMessageRequest(
-            replyToken=event.reply_token,
-            messages=[TextMessage(text=reply_text, quickReply=None, quoteToken=None)],
+            replyToken=reply_token,
+            messages=[TextMessage(text=message, quickReply=None, quoteToken=None)],
             notificationDisabled=False,
         )
         self._line_adapter.reply_message(reply_message_request)
