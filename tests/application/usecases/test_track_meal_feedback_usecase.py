@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 
 from src.application.usecases.track_meal_feedback_usecase import (
@@ -5,9 +7,10 @@ from src.application.usecases.track_meal_feedback_usecase import (
 )
 
 
-class FakeEvent:
-    def __init__(self):
-        self.reply_token = "dummy_token"
+def _make_fake_event():
+    event = Mock()
+    event.reply_token = "dummy_token"
+    return event
 
 
 class FakeLineAdapter:
@@ -56,7 +59,7 @@ def test_execute_success():
     openai_adapter = FakeOpenAIAdapter(track_score_result=True)
 
     usecase = TrackMealFeedbackUsecase(line_adapter, openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     result = usecase.execute(event, postback_data="meal_feedback:12345:100")
 
@@ -85,7 +88,7 @@ def test_execute_track_score_failure():
     openai_adapter = FakeOpenAIAdapter(track_score_result=False)
 
     usecase = TrackMealFeedbackUsecase(line_adapter, openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     result = usecase.execute(event, postback_data="meal_feedback:12345:50")
 
@@ -105,7 +108,7 @@ def test_execute_with_different_scores():
     openai_adapter = FakeOpenAIAdapter()
 
     usecase = TrackMealFeedbackUsecase(line_adapter, openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     # スコア0（悪い）
     usecase.execute(event, postback_data="meal_feedback:11111:0")
@@ -128,7 +131,7 @@ def test_execute_with_invalid_format():
     openai_adapter = FakeOpenAIAdapter()
 
     usecase = TrackMealFeedbackUsecase(line_adapter, openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     # コロン区切りが不足
     result = usecase.execute(event, postback_data="meal_feedback:12345")
@@ -149,7 +152,7 @@ def test_execute_with_invalid_values():
     openai_adapter = FakeOpenAIAdapter()
 
     usecase = TrackMealFeedbackUsecase(line_adapter, openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     # request_idが数値でない
     result = usecase.execute(event, postback_data="meal_feedback:abc:100")

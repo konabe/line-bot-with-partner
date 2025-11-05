@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 
@@ -8,9 +8,10 @@ from src.application.usecases.track_meal_feedback_usecase import (
 from tests.support.mock_adapter import MockMessagingAdapter
 
 
-class FakeEvent:
-    def __init__(self):
-        self.reply_token = "test_reply_token_123"
+def _make_fake_event():
+    event = Mock()
+    event.reply_token = "test_reply_token_123"
+    return event
 
 
 def test_execute_with_successful_score_tracking():
@@ -20,7 +21,7 @@ def test_execute_with_successful_score_tracking():
     mock_openai_adapter.track_score.return_value = True
 
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     result = usecase.execute(event, postback_data="meal_feedback:12345:100")
 
@@ -46,7 +47,7 @@ def test_execute_with_failed_score_tracking():
     mock_openai_adapter.track_score.return_value = False
 
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     result = usecase.execute(event, postback_data="meal_feedback:12345:50")
 
@@ -69,7 +70,7 @@ def test_execute_with_good_score():
     mock_openai_adapter.track_score.return_value = True
 
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     result = usecase.execute(event, postback_data="meal_feedback:99999:100")
 
@@ -86,7 +87,7 @@ def test_execute_with_normal_score():
     mock_openai_adapter.track_score.return_value = True
 
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     result = usecase.execute(event, postback_data="meal_feedback:88888:50")
 
@@ -103,7 +104,7 @@ def test_execute_with_bad_score():
     mock_openai_adapter.track_score.return_value = True
 
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
     result = usecase.execute(event, postback_data="meal_feedback:77777:0")
 
@@ -114,21 +115,19 @@ def test_execute_with_bad_score():
 
 
 def test_execute_with_track_score_exception():
-    """track_scoreで例外が発生した場合は例外が発生する結合テスト"""
+    """track_scoreで例外が発生した場合はFalseを返す結合テスト"""
     mock_line_adapter = MockMessagingAdapter()
     mock_openai_adapter = MagicMock()
     mock_openai_adapter.track_score.side_effect = RuntimeError("PromptLayer API Error")
 
     usecase = TrackMealFeedbackUsecase(mock_line_adapter, mock_openai_adapter)
-    event = FakeEvent()
+    event = _make_fake_event()
 
-    exception_raised = False
-    try:
-        usecase.execute(event, postback_data="meal_feedback:12345:100")
-    except RuntimeError:
-        exception_raised = True
+    result = usecase.execute(event, postback_data="meal_feedback:12345:100")
 
-    assert exception_raised
+    assert result is False
+    replies = mock_line_adapter.get_replies()
+    assert len(replies) == 0
 
 
 def test_execute_multiple_feedbacks():
@@ -146,7 +145,7 @@ def test_execute_multiple_feedbacks():
     ]
 
     for idx, (request_id, score) in enumerate(test_cases):
-        event = FakeEvent()
+        event = _make_fake_event()
         event.reply_token = f"token_{idx}"
         result = usecase.execute(
             event, postback_data=f"meal_feedback:{request_id}:{score}"
