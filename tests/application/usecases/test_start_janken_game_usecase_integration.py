@@ -1,5 +1,5 @@
 from typing import Optional
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, Mock
 
 from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 
@@ -8,21 +8,14 @@ from src.domain.services.janken_game_master_service import JankenGameMasterServi
 from tests.support.mock_adapter import MockMessagingAdapter
 
 
-class FakePostbackData:
-    def __init__(self, data: Optional[str]):
-        self.data: Optional[str] = data
-
-
-class FakeSource:
-    def __init__(self, user_id: Optional[str]):
-        self.user_id: Optional[str] = user_id
-
-
-class FakeEvent:
-    def __init__(self, hand: str, user_id: str = "U123456"):
-        self.reply_token: str = "test_reply_token_123"
-        self.postback: FakePostbackData = FakePostbackData(data=f"janken:{hand}")
-        self.source: FakeSource = FakeSource(user_id=user_id)
+def _make_fake_event(hand: str, user_id: str = "U123456"):
+    event = Mock()
+    event.reply_token = "test_reply_token_123"
+    event.postback = Mock()
+    event.postback.data = f"janken:{hand}"
+    event.source = Mock()
+    event.source.user_id = user_id
+    return event
 
 
 def test_execute_with_valid_hand_guu():
@@ -34,7 +27,7 @@ def test_execute_with_valid_hand_guu():
     janken_service = JankenGameMasterService()
 
     usecase = StartJankenGameUsecase(mock_line_adapter, janken_service)
-    event = FakeEvent("✊")
+    event = _make_fake_event("✊")
 
     usecase.execute(event)  # type: ignore
 
@@ -65,7 +58,7 @@ def test_execute_with_valid_hand_choki():
     janken_service = JankenGameMasterService()
 
     usecase = StartJankenGameUsecase(mock_line_adapter, janken_service)
-    event = FakeEvent("✌️")
+    event = _make_fake_event("✌️")
 
     usecase.execute(event)  # type: ignore
 
@@ -85,7 +78,7 @@ def test_execute_with_valid_hand_paa():
     janken_service = JankenGameMasterService()
 
     usecase = StartJankenGameUsecase(mock_line_adapter, janken_service)
-    event = FakeEvent("✋")
+    event = _make_fake_event("✋")
 
     usecase.execute(event)  # type: ignore
 
@@ -103,7 +96,7 @@ def test_execute_without_display_name():
     janken_service = JankenGameMasterService()
 
     usecase = StartJankenGameUsecase(mock_line_adapter, janken_service)
-    event = FakeEvent("✊")
+    event = _make_fake_event("✊")
 
     usecase.execute(event)  # type: ignore
 
@@ -124,7 +117,7 @@ def test_execute_with_profile_fetch_exception():
     mock_logger = MagicMock()
 
     usecase = StartJankenGameUsecase(mock_line_adapter, janken_service, mock_logger)
-    event = FakeEvent("✊")
+    event = _make_fake_event("✊")
 
     usecase.execute(event)  # type: ignore
 
@@ -146,7 +139,7 @@ def test_execute_multiple_games():
     usecase = StartJankenGameUsecase(mock_line_adapter, janken_service)
 
     for hand in ["✊", "✌️", "✋"]:
-        event = FakeEvent(hand)
+        event = _make_fake_event(hand)
         usecase.execute(event)  # type: ignore
 
     replies = mock_line_adapter.get_replies()

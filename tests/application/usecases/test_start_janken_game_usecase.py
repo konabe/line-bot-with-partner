@@ -1,41 +1,34 @@
 from typing import Optional
+from unittest.mock import Mock
 
-from src.application.types import PostbackEventLike
 from src.application.usecases.start_janken_game_usecase import StartJankenGameUsecase
 
 
 class FakeLineAdapter:
     def __init__(self, fn, display_name_provider=None):
         self._fn = fn
-        # display_name_provider may be a callable(user_id)->str or an exception-raising callable
         self._display_name_provider = display_name_provider
 
     def reply_message(self, req):
         return self._fn(req)
 
+    def push_message(self, req):
+        pass
+
     def get_display_name_from_line_profile(self, user_id: str) -> str:
         if self._display_name_provider is None:
-            # default: return a fixed name for tests
             return "Alice"
         return self._display_name_provider(user_id)
 
 
-def _make_event(data: Optional[str], user_id: str = "U111") -> PostbackEventLike:
-    class FakePostback:
-        def __init__(self, data: Optional[str]) -> None:
-            self.data = data
-
-    class FakeSource:
-        def __init__(self, uid: str) -> None:
-            self.user_id = uid
-
-    class FakeEvent:
-        def __init__(self, data: Optional[str], user_id: str) -> None:
-            self.postback = FakePostback(data)
-            self.reply_token = "rtok"
-            self.source = FakeSource(user_id)
-
-    return FakeEvent(data, user_id)  # type: ignore
+def _make_event(data: Optional[str], user_id: str = "U111"):
+    event = Mock()
+    event.reply_token = "rtok"
+    event.postback = Mock()
+    event.postback.data = data
+    event.source = Mock()
+    event.source.user_id = user_id
+    return event
 
 
 def test_execute_success_with_profile():
@@ -118,8 +111,13 @@ def test_execute_with_none_data_does_not_send():
     def fake_safe_reply(req):
         sent.append(req)
 
+    class FakeJankenService:
+        def play_and_make_reply(self, user_hand_input: str, user_label: str) -> str:
+            return ""
+
     svc = StartJankenGameUsecase(
-        FakeLineAdapter(fake_safe_reply, lambda uid: "Bob"), janken_service=None
+        FakeLineAdapter(fake_safe_reply, lambda uid: "Bob"),
+        janken_service=FakeJankenService(),  # type: ignore
     )
     event = _make_event(None)
 
