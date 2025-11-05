@@ -4,6 +4,7 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from linebot.v3.messaging.models import ImageMessage, ReplyMessageRequest, TextMessage
+from linebot.v3.webhooks.models.message_event import MessageEvent
 
 from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
 
@@ -15,11 +16,14 @@ class SendOutfitUsecase:
         self._line_adapter = line_adapter
         self._openai_adapter = openai_adapter
 
-    def execute(self, event, text: str) -> None:
+    def execute(self, event: MessageEvent, text: str) -> None:
+        if not event.reply_token:
+            return
+
         temp = self._parse_temperature(text or "")
         if temp is None:
             self._reply_with_text(
-                event, "温度指定が見つかりませんでした。例: 20度の服装"
+                event.reply_token, "温度指定が見つかりませんでした。例: 20度の服装"
             )
             return
 
@@ -29,11 +33,12 @@ class SendOutfitUsecase:
         image_url = self._generate_outfit_image(requirements)
         if not image_url:
             self._reply_with_text(
-                event, "画像の生成に失敗しました。後でもう一度お試しください。"
+                event.reply_token,
+                "画像の生成に失敗しました。後でもう一度お試しください。",
             )
             return
 
-        self._reply_with_image(event, image_url)
+        self._reply_with_image(event.reply_token, image_url)
 
     def _parse_temperature(self, text: str) -> Optional[int]:
         m = re.search(r"(\d{1,2})\s*度の服装", text)
@@ -44,17 +49,17 @@ class SendOutfitUsecase:
         except ValueError:
             return None
 
-    def _reply_with_text(self, event, message: str) -> None:
+    def _reply_with_text(self, reply_token: str, message: str) -> None:
         reply = ReplyMessageRequest(
-            replyToken=event.reply_token,
+            replyToken=reply_token,
             messages=[TextMessage(text=message, quickReply=None, quoteToken=None)],
             notificationDisabled=False,
         )
         self._line_adapter.reply_message(reply)
 
-    def _reply_with_image(self, event, image_url: str) -> None:
+    def _reply_with_image(self, reply_token: str, image_url: str) -> None:
         reply = ReplyMessageRequest(
-            replyToken=event.reply_token,
+            replyToken=reply_token,
             messages=[
                 ImageMessage(
                     originalContentUrl=image_url,
