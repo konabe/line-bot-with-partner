@@ -1,6 +1,14 @@
 {
   "chat.tools.terminal.autoApprove": {
+    "PYTHONPATH=. pytest": {
+      "approve": true,
+      "matchCommandLine": true
+    },
     "PYTHONPATH=. pytest -q": true,
+    "PYTHONPATH=. pytest -v": {
+      "approve": true,
+      "matchCommandLine": true
+    },
     "source venv/Scripts/activate": {
       "approve": true,
       "matchCommandLine": true
@@ -9,7 +17,7 @@
       "approve": true,
       "matchCommandLine": true
     },
-    "git commit -m": {
+    "git commit": {
       "approve": true,
       "matchCommandLine": true
     },
@@ -21,7 +29,7 @@
       "approve": true,
       "matchCommandLine": true
     },
-    "PYTHONPATH=. pytest -v": {
+    "git diff": {
       "approve": true,
       "matchCommandLine": true
     },
@@ -31,7 +39,7 @@
     "source": true,
     "pip": true,
     "black": true,
-    "flake8": true,
+    "flake8": true
   },
   "python-envs.defaultEnvManager": "ms-python.python:system",
   "python-envs.pythonProjects": [],
