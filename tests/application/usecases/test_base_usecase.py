@@ -19,7 +19,7 @@ class FakeLineAdapter:
         return "TestUser"
 
 
-def _make_fake_event(reply_token: str = "test_token"):
+def _make_fake_event(reply_token: str | None = "test_token"):
     event = Mock()
     event.reply_token = reply_token
     return event

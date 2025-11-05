@@ -114,9 +114,8 @@ def test_execute_with_profile_fetch_exception():
         side_effect=RuntimeError("Profile API Error")
     )
     janken_service = JankenGameMasterService()
-    mock_logger = MagicMock()
 
-    usecase = StartJankenGameUsecase(mock_line_adapter, janken_service, mock_logger)
+    usecase = StartJankenGameUsecase(mock_line_adapter, janken_service)
     event = _make_fake_event("✊")
 
     usecase.execute(event)  # type: ignore

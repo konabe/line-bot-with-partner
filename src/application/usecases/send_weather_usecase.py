@@ -2,25 +2,25 @@ import os
 import re
 from typing import Optional
 
-from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
+from .base_usecase import BaseUsecase
 from .protocols import LineAdapterProtocol, WeatherAdapterProtocol
 
 
-class SendWeatherUsecase:
+class SendWeatherUsecase(BaseUsecase):
     def __init__(
         self, line_adapter: LineAdapterProtocol, weather_adapter: WeatherAdapterProtocol
     ):
-        self._line_adapter = line_adapter
+        super().__init__(line_adapter)
         self._weather_adapter = weather_adapter
 
     def execute(self, event: MessageEvent, text: str) -> None:
-        if not event.reply_token:
-            return
+        self._validate_reply_token(event)
 
         reply_text = self._get_weather_reply_text(text)
-        self._send_reply(event.reply_token, reply_text)
+        if event.reply_token:
+            self._send_text_reply(event.reply_token, reply_text)
 
     def _get_weather_reply_text(self, text: str) -> str:
         t = text.strip()
@@ -61,11 +61,3 @@ class SendWeatherUsecase:
         if match:
             return match.group(1).strip()
         return None
-
-    def _send_reply(self, reply_token: str, message: str) -> None:
-        reply_message_request = ReplyMessageRequest(
-            replyToken=reply_token,
-            messages=[TextMessage(text=message, quickReply=None, quoteToken=None)],
-            notificationDisabled=False,
-        )
-        self._line_adapter.reply_message(reply_message_request)

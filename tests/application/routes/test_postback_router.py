@@ -1,11 +1,8 @@
 """PostbackRouter の単体テスト"""
 
-from typing import cast
-
 import pytest
 
 from src.application.routes.postback_router import PostbackRouter
-from src.application.types import PostbackEventLike
 
 
 class FakeLineAdapter:
@@ -170,7 +167,7 @@ class TestPostbackRouterJankenHandling:
         )
 
         event = _make_postback_event("janken:✊")
-        router.route_postback(cast(PostbackEventLike, event))
+        router.route_postback(event)
 
         # じゃんけんサービスが呼ばれていることを確認
         assert len(janken_service.play_and_make_reply_calls) == 1
@@ -187,7 +184,7 @@ class TestPostbackRouterJankenHandling:
         )
 
         event = _make_postback_event("janken:✌️")
-        router.route_postback(cast(PostbackEventLike, event))
+        router.route_postback(event)
 
         # じゃんけんサービスが呼ばれていることを確認
         assert len(janken_service.play_and_make_reply_calls) == 1
@@ -204,7 +201,7 @@ class TestPostbackRouterJankenHandling:
         )
 
         event = _make_postback_event("janken:✋")
-        router.route_postback(cast(PostbackEventLike, event))
+        router.route_postback(event)
 
         # じゃんけんサービスが呼ばれていることを確認
         assert len(janken_service.play_and_make_reply_calls) == 1
@@ -225,7 +222,7 @@ class TestPostbackRouterNoneData:
         )
 
         event = _make_postback_event(None)
-        router.route_postback(cast(PostbackEventLike, event))
+        router.route_postback(event)
 
         # デバッグログに None を記録していることを確認
         assert any("postback.data is None" in log for log in logger.debug_logs)
@@ -247,7 +244,7 @@ class TestPostbackRouterUnmatchedData:
         )
 
         event = _make_postback_event("other:action")
-        router.route_postback(cast(PostbackEventLike, event))
+        router.route_postback(event)
 
         # じゃんけんサービスが呼ばれていないことを確認
         assert len(janken_service.play_and_make_reply_calls) == 0
@@ -263,6 +260,20 @@ class TestPostbackRouterMealFeedbackHandling:
         class FakeOpenAIAdapter:
             def __init__(self):
                 self.track_score_calls = []
+
+            def get_chatgpt_response(self, user_message: str) -> str:
+                return "AI response"
+
+            def generate_image(self, prompt: str) -> str:
+                return "https://example.com/image.png"
+
+            def generate_image_prompt(self, requirements: str) -> str:
+                return "A detailed image prompt"
+
+            def get_chatgpt_meal_suggestion(self, return_request_id: bool = False):
+                if return_request_id:
+                    return "Meal suggestion", 12345
+                return "Meal suggestion"
 
             def track_score(
                 self, request_id: int, score: int, score_name: str = "user_feedback"
@@ -281,7 +292,7 @@ class TestPostbackRouterMealFeedbackHandling:
         )
 
         event = _make_postback_event("meal_feedback:12345:100")
-        router.route_postback(cast(PostbackEventLike, event))
+        router.route_postback(event)
 
         # OpenAI adapter が呼ばれていることを確認
         assert len(openai_adapter.track_score_calls) == 1

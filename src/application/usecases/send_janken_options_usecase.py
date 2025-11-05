@@ -1,18 +1,22 @@
 from linebot.v3.messaging.models import (
     ButtonsTemplate,
     PostbackAction,
-    ReplyMessageRequest,
     TemplateMessage,
 )
+from linebot.v3.webhooks.models.message_event import MessageEvent
 
+from .base_usecase import BaseUsecase
 from .protocols import LineAdapterProtocol
 
 
-class SendJankenOptionsUsecase:
+class SendJankenOptionsUsecase(BaseUsecase):
     def __init__(self, line_adapter: LineAdapterProtocol):
-        self._line_adapter = line_adapter
+        super().__init__(line_adapter)
 
-    def execute(self, event) -> None:
+    def execute(self, event: MessageEvent) -> None:
+        self._validate_reply_token(event)
+        if not event.reply_token:
+            return
         template = TemplateMessage(
             altText="じゃんけんしましょう！",
             template=ButtonsTemplate(
@@ -49,9 +53,4 @@ class SendJankenOptionsUsecase:
             ),
             quickReply=None,
         )
-        reply_message_request = ReplyMessageRequest(
-            replyToken=event.reply_token,
-            messages=[template],
-            notificationDisabled=False,
-        )
-        self._line_adapter.reply_message(reply_message_request)
+        self._send_reply(event.reply_token, [template])

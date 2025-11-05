@@ -1,7 +1,8 @@
 from typing import Optional
 
+from linebot.v3.webhooks import PostbackEvent
+
 from ...infrastructure.logger import Logger, create_logger
-from ..types import PostbackEventLike
 from ..usecases.protocols import (
     JankenServiceProtocol,
     LineAdapterProtocol,
@@ -62,19 +63,15 @@ class PostbackRouter:
         elif data.startswith("meal_feedback:"):
             self._route_meal_feedback_postback(event, data)
 
-    def _route_meal_feedback_postback(
-        self, event: PostbackEventLike, data: str
-    ) -> None:
+    def _route_meal_feedback_postback(self, event: PostbackEvent, data: str) -> None:
         usecase = TrackMealFeedbackUsecase(
             line_adapter=self.line_adapter,
             openai_adapter=self.openai_adapter,
-            logger=self.logger,
         )
         usecase.execute(event, data)
 
-    def _route_janken_postback(self, event: PostbackEventLike) -> None:
+    def _route_janken_postback(self, event: PostbackEvent) -> None:
         StartJankenGameUsecase(
             line_adapter=self.line_adapter,
             janken_service=self.janken_service,
-            logger=self.logger,
         ).execute(event)

@@ -1,25 +1,23 @@
 from typing import Optional
 
-from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks.models.postback_event import PostbackEvent
 
-from ...infrastructure.logger import Logger, create_logger
+from .base_usecase import BaseUsecase
 from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
 
 
-class TrackMealFeedbackUsecase:
+class TrackMealFeedbackUsecase(BaseUsecase):
     def __init__(
         self,
         line_adapter: LineAdapterProtocol,
         openai_adapter: OpenAIAdapterProtocol,
-        logger: Optional[Logger] = None,
     ):
-        self._line_adapter = line_adapter
+        super().__init__(line_adapter)
         self._openai_adapter = openai_adapter
-        self._logger = logger or create_logger(__name__)
 
     def execute(self, event: PostbackEvent, postback_data: str) -> bool:
-        if not event.reply_token:
+        reply_token = event.reply_token
+        if not reply_token:
             self._logger.warning("reply_tokenが存在しないため、応答をスキップします")
             return False
 
@@ -31,7 +29,7 @@ class TrackMealFeedbackUsecase:
 
         try:
             success = self._track_score(pl_request_id, score)
-            self._send_feedback_message(event.reply_token)
+            self._send_text_reply(reply_token, "評価ありがとうございます!😊")
             return success
         except Exception as e:
             self._logger.exception(f"フィードバック処理中にエラーが発生: {e}")
@@ -55,12 +53,3 @@ class TrackMealFeedbackUsecase:
         return self._openai_adapter.track_score(
             request_id=request_id, score=score, score_name="user_feedback"
         )
-
-    def _send_feedback_message(self, reply_token: str) -> None:
-        feedback_msg = "評価ありがとうございます!😊"
-        reply_message_request = ReplyMessageRequest(
-            replyToken=reply_token,
-            messages=[TextMessage(text=feedback_msg, quickReply=None, quoteToken=None)],
-            notificationDisabled=False,
-        )
-        self._line_adapter.reply_message(reply_message_request)

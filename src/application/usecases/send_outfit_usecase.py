@@ -3,26 +3,28 @@ import re
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from linebot.v3.messaging.models import ImageMessage, ReplyMessageRequest, TextMessage
+from linebot.v3.messaging.models import ImageMessage
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
+from .base_usecase import BaseUsecase
 from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
 
 
-class SendOutfitUsecase:
+class SendOutfitUsecase(BaseUsecase):
     def __init__(
         self, line_adapter: LineAdapterProtocol, openai_adapter: OpenAIAdapterProtocol
     ):
-        self._line_adapter = line_adapter
+        super().__init__(line_adapter)
         self._openai_adapter = openai_adapter
 
     def execute(self, event: MessageEvent, text: str) -> None:
+        self._validate_reply_token(event)
         if not event.reply_token:
             return
 
         temp = self._parse_temperature(text or "")
         if temp is None:
-            self._reply_with_text(
+            self._send_text_reply(
                 event.reply_token, "温度指定が見つかりませんでした。例: 20度の服装"
             )
             return
@@ -32,7 +34,7 @@ class SendOutfitUsecase:
 
         image_url = self._generate_outfit_image(requirements)
         if not image_url:
-            self._reply_with_text(
+            self._send_text_reply(
                 event.reply_token,
                 "画像の生成に失敗しました。後でもう一度お試しください。",
             )
@@ -49,27 +51,13 @@ class SendOutfitUsecase:
         except ValueError:
             return None
 
-    def _reply_with_text(self, reply_token: str, message: str) -> None:
-        reply = ReplyMessageRequest(
-            replyToken=reply_token,
-            messages=[TextMessage(text=message, quickReply=None, quoteToken=None)],
-            notificationDisabled=False,
-        )
-        self._line_adapter.reply_message(reply)
-
     def _reply_with_image(self, reply_token: str, image_url: str) -> None:
-        reply = ReplyMessageRequest(
-            replyToken=reply_token,
-            messages=[
-                ImageMessage(
-                    originalContentUrl=image_url,
-                    previewImageUrl=image_url,
-                    quickReply=None,
-                )
-            ],
-            notificationDisabled=False,
+        image_message = ImageMessage(
+            originalContentUrl=image_url,
+            previewImageUrl=image_url,
+            quickReply=None,
         )
-        self._line_adapter.reply_message(reply)
+        self._send_reply(reply_token, [image_message])
 
     def _build_outfit_requirements(self, temperature: int, month: int) -> str:
         return f"アラサーの日本人男性と日本人女性に適した、{month}月の雰囲気に合う摂氏{temperature}度の服装コーディネート。キレイ目のファッション。"

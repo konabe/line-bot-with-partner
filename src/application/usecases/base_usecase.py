@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Sequence, Union
 
 from linebot.v3.messaging.models import Message, ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks.models.message_event import MessageEvent
@@ -15,9 +15,7 @@ class BaseUsecase:
         self._line_adapter = line_adapter
         self._logger = logger or create_logger(self.__class__.__name__)
 
-    def _validate_reply_token(
-        self, event: Union[MessageEvent, PostbackEvent]
-    ) -> bool:
+    def _validate_reply_token(self, event: Union[MessageEvent, PostbackEvent]) -> bool:
         if not event.reply_token:
             self._logger.warning("reply_tokenが存在しないため、応答をスキップします")
             return False
@@ -28,10 +26,10 @@ class BaseUsecase:
             reply_token, [TextMessage(text=text, quickReply=None, quoteToken=None)]
         )
 
-    def _send_reply(self, reply_token: str, messages: list[Message]) -> None:
+    def _send_reply(self, reply_token: str, messages: Sequence[Message]) -> None:
         reply_message_request = ReplyMessageRequest(
             replyToken=reply_token,
-            messages=messages,
+            messages=list(messages),
             notificationDisabled=False,
         )
         self._line_adapter.reply_message(reply_message_request)

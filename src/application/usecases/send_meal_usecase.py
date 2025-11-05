@@ -1,38 +1,37 @@
-from typing import Optional
+from typing import Optional, cast
 
 from linebot.v3.messaging.models import (
     ButtonsTemplate,
+    Message,
     PostbackAction,
-    ReplyMessageRequest,
     TemplateMessage,
     TextMessage,
 )
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
-from ...infrastructure.logger import Logger, create_logger
+from .base_usecase import BaseUsecase
 from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
 
 
-class SendMealUsecase:
+class SendMealUsecase(BaseUsecase):
     def __init__(
         self,
         line_adapter: LineAdapterProtocol,
         openai_adapter: OpenAIAdapterProtocol,
-        logger: Optional[Logger] = None,
     ):
-        self._line_adapter = line_adapter
+        super().__init__(line_adapter)
         self._openai_adapter = openai_adapter
-        self._logger = logger or create_logger(__name__)
 
     def execute(self, event: MessageEvent) -> None:
-        if not event.reply_token:
+        reply_token = event.reply_token
+        if not reply_token:
             self._logger.warning("reply_tokenが存在しないため、応答をスキップします")
             return
 
         try:
             suggestion, pl_request_id = self._get_meal_suggestion()
             messages = self._create_messages(suggestion, pl_request_id)
-            self._send_reply(event.reply_token, messages)
+            self._send_reply(reply_token, cast(list[Message], messages))
         except Exception as e:
             self._logger.exception(f"料理提案の送信中にエラーが発生: {e}")
 
@@ -105,13 +104,3 @@ class SendMealUsecase:
             ),
             quickReply=None,
         )
-
-    def _send_reply(
-        self, reply_token: str, messages: list[TextMessage | TemplateMessage]
-    ) -> None:
-        reply_message_request = ReplyMessageRequest(
-            replyToken=reply_token,
-            messages=messages,
-            notificationDisabled=False,
-        )
-        self._line_adapter.reply_message(reply_message_request)

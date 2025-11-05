@@ -1,31 +1,30 @@
 from typing import Optional
 
-from linebot.v3.messaging.models import ReplyMessageRequest, TextMessage
 from linebot.v3.webhooks.models.message_event import MessageEvent
 
-from ...infrastructure.logger import Logger, create_logger
+from ...infrastructure.logger import Logger
+from .base_usecase import BaseUsecase
 from .protocols import LineAdapterProtocol, OpenAIAdapterProtocol
 
 
-class SendChatResponseUsecase:
+class SendChatResponseUsecase(BaseUsecase):
     def __init__(
         self,
         line_adapter: LineAdapterProtocol,
         openai_adapter: OpenAIAdapterProtocol,
         logger: Optional[Logger] = None,
     ):
-        self._line_adapter = line_adapter
+        super().__init__(line_adapter, logger)
         self._openai_adapter = openai_adapter
-        self._logger = logger or create_logger(__name__)
 
     def execute(self, event: MessageEvent, user_message: str) -> None:
-        if not event.reply_token:
-            self._logger.warning("reply_tokenが存在しないため、応答をスキップします")
+        if not self._validate_reply_token(event):
             return
 
         try:
             response_text = self._get_response(user_message)
-            self._send_reply(event.reply_token, response_text)
+            if event.reply_token:
+                self._send_text_reply(event.reply_token, response_text)
         except Exception as e:
             self._logger.exception(f"チャット応答の送信中にエラーが発生: {e}")
 
@@ -38,11 +37,3 @@ class SendChatResponseUsecase:
             self._logger.error(f"ChatGPT応答の取得に失敗: {e}")
 
         return "申し訳ないです。応答を生成できませんでした。管理者に OPENAI_API_KEY の設定を確認してもらってください。"
-
-    def _send_reply(self, reply_token: str, text: str) -> None:
-        reply_message_request = ReplyMessageRequest(
-            replyToken=reply_token,
-            messages=[TextMessage(text=text, quickReply=None, quoteToken=None)],
-            notificationDisabled=False,
-        )
-        self._line_adapter.reply_message(reply_message_request)
