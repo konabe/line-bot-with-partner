@@ -1,10 +1,14 @@
-from typing import Any, Optional, Protocol
+from typing import TYPE_CHECKING, Optional, Protocol
+
+if TYPE_CHECKING:
+    from src.domain.models.digimon_info import DigimonInfo
+    from src.domain.models.pokemon_info import PokemonInfo
 
 
 class LineAdapterProtocol(Protocol):
-    def reply_message(self, *args: Any, **kwargs: Any) -> Any: ...
+    def reply_message(self, reply_message_request) -> None: ...
 
-    def push_message(self, *args: Any, **kwargs: Any) -> Optional[bool]: ...
+    def push_message(self, push_message_request) -> None: ...
 
     def get_display_name_from_line_profile(self, user_id: str) -> Optional[str]: ...
 
@@ -30,11 +34,11 @@ class WeatherAdapterProtocol(Protocol):
 
 
 class DigimonAdapterProtocol(Protocol):
-    def get_random_digimon_info(self) -> Any: ...
+    def get_random_digimon_info(self) -> Optional["DigimonInfo"]: ...
 
 
 class PokemonAdapterProtocol(Protocol):
-    def get_random_pokemon_info(self) -> Any: ...
+    def get_random_pokemon_info(self) -> Optional["PokemonInfo"]: ...
 
 
 class JankenServiceProtocol(Protocol):

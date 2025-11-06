@@ -1,11 +1,13 @@
-from typing import Any, Optional
+from typing import Optional
 
+from flask import Flask
 from linebot.v3.webhook import WebhookHandler
 from linebot.v3.webhooks.models.message_event import MessageEvent
 from linebot.v3.webhooks.models.postback_event import PostbackEvent
 
 from src.application.routes.message_router import MessageRouter
 from src.application.routes.postback_router import PostbackRouter
+from src.application.usecases.protocols import LineAdapterProtocol
 
 from ..infrastructure.adapters.digimon_adapter import DigimonApiAdapter
 from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
@@ -17,9 +19,9 @@ from .register_flask_routes import register_routes
 
 
 def bind_routes(
-    app: Any,
+    app: Flask,
     handler: WebhookHandler,
-    line_adapter: Optional[Any] = None,
+    line_adapter: Optional[LineAdapterProtocol] = None,
     logger: Optional[Logger] = None,
 ) -> None:
     """Webhook ハンドラを登録する。

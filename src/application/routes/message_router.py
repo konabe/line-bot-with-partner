@@ -1,4 +1,4 @@
-from typing import Any, Optional, cast
+from typing import Optional
 
 from ...infrastructure.logger import Logger, create_logger
 from ..usecases.protocols import (
@@ -119,9 +119,9 @@ class MessageRouter:
 
     def _route_chatgpt(self, event, text: str) -> None:
         self.logger.info("コマンド以外のメッセージを受信: usecase に委譲")
-        SendChatResponseUsecase(
-            cast(Any, self.line_adapter), cast(Any, self.openai_adapter)
-        ).execute(event, text)
+        SendChatResponseUsecase(self.line_adapter, self.openai_adapter).execute(
+            event, text
+        )
 
     def _route_outfit(self, event, text: str) -> None:
         self.logger.info("服装画像リクエストを受信: usecase に委譲")

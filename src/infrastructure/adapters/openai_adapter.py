@@ -1,7 +1,7 @@
 import datetime
 import json
 import os
-from typing import Any, Optional
+from typing import Optional
 from zoneinfo import ZoneInfo
 
 from openai import OpenAI
@@ -30,14 +30,15 @@ class OpenAIAdapter:
         self.promptlayer_api_key = os.environ.get("PROMPTLAYER_API_KEY")
         if self.promptlayer_api_key:
             # PromptLayerでラップされたOpenAIクライアントを使用
+            # PromptLayerのラッパーはOpenAI互換だが型チェックでは異なる型として扱われる
             self.promptlayer_client = PromptLayer(api_key=self.promptlayer_api_key)
             OpenAIWithPL = self.promptlayer_client.openai.OpenAI
-            self.openai_client: Any = OpenAIWithPL(api_key=self.api_key)
+            self.openai_client: OpenAI = OpenAIWithPL(api_key=self.api_key)  # type: ignore[assignment]
             self.logger.info("PromptLayer enabled with OpenAI SDK wrapper")
         else:
             # 通常のOpenAIクライアントを使用
             self.promptlayer_client = None
-            self.openai_client: Any = OpenAI(api_key=self.api_key)
+            self.openai_client: OpenAI = OpenAI(api_key=self.api_key)
             self.logger.info("PromptLayer disabled (PROMPTLAYER_API_KEY not set)")
 
     def _call_openai_api(

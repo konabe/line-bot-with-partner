@@ -108,18 +108,29 @@
 - **テスト結果**: 全223テスト成功 ✅
 - **影響範囲**: 起動処理
 
-### [ ] 8. 型ヒントの完全性を向上
+### [x] 8. 型ヒントの完全性を向上 ✅ 完了
 - **問題**: 一部の関数で型ヒントが不完全 (`Any` の多用、戻り値の型が曖昧)
 - **影響**: IDE補完の効率低下、バグの検出が遅れる
 - **対象ファイル**: 
   - `src/application/bind_routes.py`
   - `src/application/routes/message_router.py`
   - `src/application/routes/postback_router.py`
-  - その他多数
+  - `src/application/usecases/protocols.py`
+  - `src/infrastructure/adapters/openai_adapter.py`
 - **改善内容**:
-  - `Any` を具体的な型に置き換え
-  - Protocol型を活用
-  - pyright/mypyでの型チェックを強化
+  - `Any` を具体的な型に置き換え ✅
+  - Protocol型を改善（DigimonInfo、PokemonInfo型を追加）✅
+  - bind_routes の app パラメータを Flask 型に ✅
+  - line_adapter パラメータを LineAdapterProtocol 型に ✅
+  - 不要な cast を削除 ✅
+  - TYPE_CHECKING を使用した循環インポート回避 ✅
+- **完了日**: 2025-11-06
+- **結果**: 
+  - protocols.py で DigimonInfo と PokemonInfo の型を明示 ✅
+  - bind_routes.py で Flask と LineAdapterProtocol を使用 ✅
+  - message_router.py で不要な Any と cast を削除 ✅
+  - openai_adapter.py で Any を削除 ✅
+- **テスト結果**: 全223テスト成功 ✅
 - **影響範囲**: 型チェック、IDE補完
 
 ---
@@ -203,7 +214,7 @@
 3. **Phase 3: リファクタリング** (中優先度 6-8)
    - [x] 不要な__init__.pyの整理 ✅
    - [x] 起動通知の実装方法改善 ✅
-   - [ ] 型ヒントの完全性向上
+   - [x] 型ヒントの完全性向上 ✅
 
 4. **Phase 4: 保守性向上** (低優先度 9-13)
    - [ ] ドキュメント整理
@@ -223,7 +234,9 @@
 - 🎉 **Phase 1完了**: 高優先度のアーキテクチャ・品質改善がすべて完了しました！
 - 2025-11-06: pytest-covの問題を解決。カバレッジ測定が可能になり84%を達成。HTMLレポート生成機能も追加
 - 2025-11-06: 不要な__init__.pyファイルを整理完了。PEP 420名前空間パッケージに完全準拠し、空のファイルを3つ削除
-- 2025-11-06: 起動通知の実装を改善完了。`DISABLE_STARTUP_NOTIFICATION`環境変数で制御可能になり、ログメッセージも追加 
+- 2025-11-06: 起動通知の実装を改善完了。`DISABLE_STARTUP_NOTIFICATION`環境変数で制御可能になり、ログメッセージも追加
+- 2025-11-06: 型ヒントの完全性を向上完了。`Any`を削除してProtocol型を改善し、IDE補完とバグ検出が向上
+- 🎉 **Phase 3完了**: 中優先度のリファクタリングがすべて完了しました！ 
 
 ---
 
