@@ -53,8 +53,10 @@ def _notify_once_on_import() -> None:
         )
         startup_notification_usecase.execute()
         logger.info("Startup notification sent successfully")
+    except (OSError, IOError) as e:
+        logger.error(f"File I/O error during startup notification ({type(e).__name__}): {e}")
     except Exception as e:
-        logger.error(f"startup notify failed: {e}")
+        logger.error(f"Unexpected error during startup notification ({type(e).__name__}): {e}")
 
 
 _notify_once_on_import()

@@ -48,8 +48,11 @@ def _is_duplicate_event(body: str) -> bool:
                 _processed_events.popitem(last=False)
 
         return False
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        logger.warning(f"Error parsing event for duplicate check ({type(e).__name__}): {e}")
+        return False
     except Exception as e:
-        logger.error(f"Error checking duplicate event: {e}")
+        logger.error(f"Unexpected error checking duplicate event ({type(e).__name__}): {e}")
         return False
 
 
@@ -77,8 +80,12 @@ def register_routes(app, handler: WebhookHandler, line_adapter):
             logger.error("InvalidSignatureError: signature invalid")
             _handle_signature_error(body, line_adapter)
             abort(400)
+        except (ValueError, TypeError, AttributeError) as e:
+            logger.error(f"Data processing error in handler.handle ({type(e).__name__}): {e}")
+            _handle_general_error(body, line_adapter)
+            abort(500)
         except Exception as e:
-            logger.error(f"Exception in handler.handle: {e}")
+            logger.error(f"Unexpected error in handler.handle ({type(e).__name__}): {e}")
             _handle_general_error(body, line_adapter)
             abort(500)
         return "OK", 200

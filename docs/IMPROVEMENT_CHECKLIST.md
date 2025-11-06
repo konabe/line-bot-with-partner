@@ -206,18 +206,25 @@
 - **テスト結果**: 全223テスト成功 ✅
 - **影響範囲**: 全環境
 
-### [ ] 13. エラーハンドリングの改善
+### [x] 13. エラーハンドリングの改善 ✅ 完了
 - **問題**: 一部の例外処理で `Exception` を広くキャッチしている
 - **影響**: 具体的なエラーの特定が困難
 - **対象ファイル**: 
-  - `src/infrastructure/adapters/openai_adapter.py`
-  - `src/infrastructure/adapters/line_adapter.py`
-  - `src/app.py`
-  - その他多数
+  - `src/infrastructure/adapters/openai_adapter.py` ✅
+  - `src/application/register_flask_routes.py` ✅
+  - `src/app.py` ✅
 - **改善内容**:
-  - より具体的な例外クラスをキャッチ
-  - カスタム例外クラスの導入
-  - エラーメッセージの改善
+  - OpenAI SDK: APIError, APIConnectionError, RateLimitError, AuthenticationError に分離 ✅
+  - 起動通知: OSError/IOError をキャッチ ✅
+  - Webhook処理: JSONDecodeError, KeyError, TypeError, ValueError, AttributeError に分離 ✅
+  - 全エラーログに例外型名（`{type(e).__name__}`）を追加 ✅
+- **完了日**: 2025-11-06
+- **結果**: 
+  - エラー診断が容易になった
+  - 予期されるエラーと予期しないエラーを明確に区別
+  - デバッグ効率が向上
+- **テスト結果**: 全223テスト成功 ✅
+- **影響範囲**: エラーハンドリング全般
 - **影響範囲**: エラーハンドリング全般
 
 ---
