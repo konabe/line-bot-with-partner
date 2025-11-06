@@ -240,7 +240,11 @@ PEP 420 の名前空間パッケージを使用しているため、`PYTHONPATH=
 
 1. [SonarCloud](https://sonarcloud.io/) にログイン
 2. リポジトリをインポート（konabe/line-bot-with-partner）
-3. GitHub Secrets に `SONAR_TOKEN` を追加
+3. **Automatic Analysis を無効化**（重要！）
+   - Project Settings → Analysis Method
+   - "Automatic Analysis" をオフにする
+   - "CI-based analysis" を選択
+4. GitHub Secrets に `SONAR_TOKEN` を追加
    - Settings → Secrets and variables → Actions → New repository secret
    - Name: `SONAR_TOKEN`
    - Value: SonarCloudで生成したトークン
