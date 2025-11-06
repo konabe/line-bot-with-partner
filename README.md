@@ -52,10 +52,14 @@ OPENAI_MODEL=gpt-4o-mini  # 省略可（デフォルト: gpt-5-mini）
 OPENWEATHERMAP_API_KEY=your_openweathermap_api_key
 
 # 起動通知（任意）
-ADMIN_USER_ID=Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-ADMIN_STARTUP_MESSAGE=サーバーが起動しました。
+ADMIN_USER_ID=Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # push先のユーザーID（Botの友だちである必要がある）
+ADMIN_STARTUP_MESSAGE=サーバーが起動しました。  # 送信する文面（省略時のデフォルト値）
 DISABLE_STARTUP_NOTIFICATION=1  # 起動通知を無効化する場合に設定（省略時は有効）
 ```
+
+サーバー起動時にLINEで起動完了メッセージを受け取る場合は `ADMIN_USER_ID` を設定してください。
+Renderなどの PaaS での再デプロイ時にも通知されます。
+複数ワーカー構成では `/tmp/line-bot-startup-notified` フラグで1回のみに制御されます。
 
 3. ローカル実行（開発時）:
 ```bash
@@ -68,31 +72,18 @@ gunicorn src.app:app --bind 0.0.0.0:8080
 
 Webhook を動かすには public URL が必要です（ngrok 等を使用）。
 
-## 開発者向け情報
-
-## Developer setup (recommended)
-
-To make development easier and keep code style consistent, run the following once after cloning:
-
+4. Pre-commit フックの設定（推奨）:
 ```bash
-# create a virtual env, activate it, then:
-python -m pip install --upgrade pip
-python -m pip install -r requirements-dev.txt
-
-# install pre-commit git hooks for this repository
+# コードスタイルを自動チェック
 python -m pre_commit install
-# optionally install pre-push hooks as well
+# プッシュ前のチェックも有効化
 python -m pre_commit install --hook-type pre-push
-```
 
-After this, `pre-commit` will run configured checks (isort, black, flake8, etc.) automatically on commit.
-
-If you want to run all hooks manually anytime:
-
-```bash
+# 手動で全ファイルをチェック
 python -m pre_commit run --all-files
 ```
 
+## 開発者向け情報
 
 ### 🛠️ 開発環境
 
@@ -109,6 +100,8 @@ python -m pre_commit run --all-files
 # テスト実行
 make test                # 簡潔な出力
 make test-verbose       # 詳細な出力
+make test-coverage      # カバレッジ測定
+make test-coverage-html # HTMLレポート生成（htmlcov/index.html）
 PYTHONPATH=. pytest -q # 直接実行
 
 # コード品質
@@ -123,6 +116,10 @@ make install-deps      # 依存関係再インストール
 make run               # 開発サーバー起動
 ./start.sh            # 本番サーバー起動
 ```
+
+**テスト統計:**
+- テスト数: **223個** (全て成功 ✅)
+- コードカバレッジ: **84%** ✅
 
 #### トラブルシューティング
 
@@ -194,31 +191,7 @@ postback_router = PostbackRouter(line_adapter, logger=logger, janken_service=ser
 postback_router.route_postback(event)
 ```
 
-
-### テスト実行
-
-```bash
-# 基本的なテスト実行
-PYTHONPATH=. pytest
-
-# 詳細表示
-PYTHONPATH=. pytest -v
-
-# カバレッジ付きテスト実行
-make test-coverage
-
-# HTMLカバレッジレポート生成
-make test-coverage-html
-# レポートは htmlcov/index.html に生成されます
-```
-
-**テスト統計:**
-- テスト数: **223個** (全て成功 ✅)
-- コードカバレッジ: **84%** ✅
-
-PEP 420 の名前空間パッケージを使用しているため、`PYTHONPATH=.` の設定が必要です。
-
-## アダプタ移動について（注記）
+### アダプタ移動について（注記）
 
 アダプタ実装は `src/infrastructure/adapters/` に移動しました。リポジトリ内の呼び出し元は新しいパスへ更新済みで、
 トップレベルにあった互換性用の shim は削除されています。今後は新しいパスで直接インポートしてください。
@@ -261,24 +234,6 @@ make test-coverage-html
 ```
 
 CI/CDパイプラインでは自動的にカバレッジデータがSonarCloudに送信されます。
-
-## 起動通知機能
-
-サーバー起動時に LINE で起動完了メッセージを受け取りたい場合、以下の環境変数を設定します。
-
-| 環境変数 | 必須 | 説明 |
-|----------|------|------|
-| `ADMIN_USER_ID` | 任意 | push 先のユーザー ID（Bot の友だちである必要があります） |
-| `ADMIN_STARTUP_MESSAGE` | 任意 | 送信する文面。省略時: `サーバーが起動しました。` |
-
-例:
-```bash
-ADMIN_USER_ID=Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-ADMIN_STARTUP_MESSAGE=Bot サーバーが再起動しました
-```
-
-Render などの PaaS での再デプロイ時にもプロセス起動直後に 1 回だけ送信されます。
-複数ワーカーを立てる構成では `/tmp/line-bot-startup-notified` フラグで 1 回のみに制御されます。
 
 ## 天気情報機能
 
