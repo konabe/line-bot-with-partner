@@ -32,19 +32,27 @@ logger.info("App initialized (module imported)")
 def _notify_once_on_import() -> None:
     """インポート時に一度だけ起動通知を送る。
 
-    コンテナ内で一度だけ実行されるよう、固定フラグファイルで多重送信を防止。
+    環境変数 DISABLE_STARTUP_NOTIFICATION=1 で無効化可能。
+    コンテナ内で一度だけ実行されるよう、/tmp配下のフラグファイルで多重送信を防止。
     """
+    if os.environ.get("DISABLE_STARTUP_NOTIFICATION") == "1":
+        logger.info("Startup notification is disabled by environment variable")
+        return
+
     flag_path = "/tmp/line-bot-startup-notified"
     try:
         with open(flag_path, "x"):
             pass
     except FileExistsError:
+        logger.debug("Startup notification already sent (flag file exists)")
         return
+
     try:
         startup_notification_usecase = SendStartupNotificationUsecase(
             _line_adapter, create_logger(__name__)
         )
         startup_notification_usecase.execute()
+        logger.info("Startup notification sent successfully")
     except Exception as e:
         logger.error(f"startup notify failed: {e}")
 

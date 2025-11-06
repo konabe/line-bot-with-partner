@@ -54,6 +54,7 @@ OPENWEATHERMAP_API_KEY=your_openweathermap_api_key
 # 起動通知（任意）
 ADMIN_USER_ID=Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ADMIN_STARTUP_MESSAGE=サーバーが起動しました。
+DISABLE_STARTUP_NOTIFICATION=1  # 起動通知を無効化する場合に設定（省略時は有効）
 ```
 
 3. ローカル実行（開発時）:
