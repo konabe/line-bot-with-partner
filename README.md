@@ -193,12 +193,23 @@ postback_router.route_postback(event)
 ### テスト実行
 
 ```bash
-# リポジトリルートから実行
+# 基本的なテスト実行
 PYTHONPATH=. pytest
 
-# または詳細表示
+# 詳細表示
 PYTHONPATH=. pytest -v
+
+# カバレッジ付きテスト実行
+make test-coverage
+
+# HTMLカバレッジレポート生成
+make test-coverage-html
+# レポートは htmlcov/index.html に生成されます
 ```
+
+**テスト統計:**
+- テスト数: **223個** (全て成功 ✅)
+- コードカバレッジ: **84%** ✅
 
 PEP 420 の名前空間パッケージを使用しているため、`PYTHONPATH=.` の設定が必要です。
 

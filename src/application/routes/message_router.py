@@ -17,8 +17,6 @@ from ..usecases.send_outfit_usecase import SendOutfitUsecase
 from ..usecases.send_pokemon_zukan_usecase import SendPokemonZukanUsecase
 from ..usecases.send_weather_usecase import SendWeatherUsecase
 
-logger = create_logger(__name__)
-
 
 class MessageRouter:
     def __init__(
@@ -65,7 +63,7 @@ class MessageRouter:
             message = args[1]
 
         if event is None:
-            logger.error(
+            self.logger.error(
                 "route_message called but no event object could be inferred; skipping"
             )
             return
@@ -76,10 +74,10 @@ class MessageRouter:
         else:
             text = getattr(getattr(event, "message", None), "text", "")
 
-        logger.debug(f"route_message called. text: {text}")
+        self.logger.debug(f"route_message called. text: {text}")
 
         if text is None:
-            logger.debug("text is None (スタンプなど), 処理をスキップ")
+            self.logger.debug("text is None (スタンプなど), 処理をスキップ")
             return
 
         t = (text or "").strip()
@@ -100,31 +98,31 @@ class MessageRouter:
             return self._route_chatgpt(event, text)
 
     def _route_weather(self, event, text: str) -> None:
-        logger.info("天気リクエスト検出: usecase に委譲")
+        self.logger.info("天気リクエスト検出: usecase に委譲")
         SendWeatherUsecase(self.line_adapter, self.weather_adapter).execute(event, text)
 
     def _route_janken(self, event) -> None:
-        logger.info("じゃんけんテンプレートを送信 (usecase に委譲)")
+        self.logger.info("じゃんけんテンプレートを送信 (usecase に委譲)")
         SendJankenOptionsUsecase(self.line_adapter).execute(event)
 
     def _route_meal(self, event) -> None:
-        logger.info("今日のご飯リクエストを受信: usecase に委譲")
+        self.logger.info("今日のご飯リクエストを受信: usecase に委譲")
         SendMealUsecase(self.line_adapter, self.openai_adapter).execute(event)
 
     def _route_pokemon_zukan(self, event) -> None:
-        logger.info("ポケモンリクエスト受信: usecase に委譲")
+        self.logger.info("ポケモンリクエスト受信: usecase に委譲")
         SendPokemonZukanUsecase(self.line_adapter, self.pokemon_adapter).execute(event)
 
     def _route_digimon(self, event) -> None:
-        logger.info("デジモンリクエスト受信: usecase に委譲")
+        self.logger.info("デジモンリクエスト受信: usecase に委譲")
         SendDigimonUsecase(self.line_adapter, self.digimon_adapter).execute(event)
 
     def _route_chatgpt(self, event, text: str) -> None:
-        logger.info("コマンド以外のメッセージを受信: usecase に委譲")
+        self.logger.info("コマンド以外のメッセージを受信: usecase に委譲")
         SendChatResponseUsecase(
             cast(Any, self.line_adapter), cast(Any, self.openai_adapter)
         ).execute(event, text)
 
     def _route_outfit(self, event, text: str) -> None:
-        logger.info("服装画像リクエストを受信: usecase に委譲")
+        self.logger.info("服装画像リクエストを受信: usecase に委譲")
         SendOutfitUsecase(self.line_adapter, self.openai_adapter).execute(event, text)

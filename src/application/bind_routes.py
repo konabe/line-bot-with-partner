@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Optional
 
 from linebot.v3.webhook import WebhookHandler
@@ -8,15 +7,13 @@ from linebot.v3.webhooks.models.postback_event import PostbackEvent
 from src.application.routes.message_router import MessageRouter
 from src.application.routes.postback_router import PostbackRouter
 
-from ..domain import OpenAIAdapter
 from ..infrastructure.adapters.digimon_adapter import DigimonApiAdapter
 from ..infrastructure.adapters.line_adapter import LineMessagingAdapter
+from ..infrastructure.adapters.openai_adapter import OpenAIAdapter
 from ..infrastructure.adapters.pokemon_adapter import PokemonApiAdapter
 from ..infrastructure.adapters.weather_adapter import WeatherAdapter
 from ..infrastructure.logger import Logger, create_logger
 from .register_flask_routes import register_routes
-
-logger = logging.getLogger(__name__)
 
 
 def bind_routes(

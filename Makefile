@@ -26,7 +26,12 @@ test-verbose:  ## テストの実行 (詳細表示)
 
 test-coverage:  ## カバレッジ付きテストの実行
 	@echo "🧪 カバレッジ付きテストを実行中..."
-	PYTHONPATH=. pytest --cov=src tests/
+	PYTHONPATH=. pytest --cov=src --cov-report=term-missing tests/
+
+test-coverage-html:  ## カバレッジ付きテストの実行（HTMLレポート生成）
+	@echo "🧪 カバレッジ付きテストを実行中（HTMLレポート生成）..."
+	PYTHONPATH=. pytest --cov=src --cov-report=html --cov-report=term-missing tests/
+	@echo "📊 HTMLレポートが htmlcov/index.html に生成されました"
 
 format:  ## コードフォーマット
 	@echo "✨ コードをフォーマット中..."
@@ -44,6 +49,8 @@ clean:  ## キャッシュファイルの削除
 	find . -name "*.pyd" -delete
 	find . -name ".coverage" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
+	rm -rf htmlcov/
+	rm -rf .pytest_cache/
 
 check:  ## 全チェックの実行（テスト、lint、フォーマット確認）
 	@echo "📋 全チェックを実行中..."
