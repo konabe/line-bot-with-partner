@@ -48,6 +48,7 @@ clean:  ## キャッシュファイルの削除
 	find . -name "*.pyo" -delete
 	find . -name "*.pyd" -delete
 	find . -name ".coverage" -delete
+	find . -name "coverage.xml" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
 	rm -rf htmlcov/
 	rm -rf .pytest_cache/

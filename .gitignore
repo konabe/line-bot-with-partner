@@ -15,6 +15,7 @@ __pycache__/
 # テスト出力
 htmlcov/
 .coverage
+coverage.xml
 
 # OSファイル
 .DS_Store

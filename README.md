@@ -1,5 +1,9 @@
 # LINE Bot with Partner
 
+[![CI](https://github.com/konabe/line-bot-with-partner/actions/workflows/ci.yml/badge.svg)](https://github.com/konabe/line-bot-with-partner/actions/workflows/ci.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=konabe_line-bot-with-partner&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=konabe_line-bot-with-partner)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=konabe_line-bot-with-partner&metric=coverage)](https://sonarcloud.io/summary/new_code?id=konabe_line-bot-with-partner)
+
 Flask + line-bot-sdk を使った LINE Bot アプリケーションです。
 
 ## 機能
@@ -227,6 +231,31 @@ PEP 420 の名前空間パッケージを使用しているため、`PYTHONPATH=
 - コメントは日本語で記述
 - global宣言は使用しない
 - 不要になったコードは削除（互換性は考慮しない）
+
+### SonarCloud セットアップ
+
+コード品質とカバレッジを追跡するために SonarCloud を使用しています。
+
+#### 初回セットアップ（リポジトリ管理者向け）
+
+1. [SonarCloud](https://sonarcloud.io/) にログイン
+2. リポジトリをインポート（konabe/line-bot-with-partner）
+3. GitHub Secrets に `SONAR_TOKEN` を追加
+   - Settings → Secrets and variables → Actions → New repository secret
+   - Name: `SONAR_TOKEN`
+   - Value: SonarCloudで生成したトークン
+
+#### ローカルでのカバレッジ確認
+
+```bash
+# XML形式のカバレッジレポート生成（SonarCloudと同じ形式）
+PYTHONPATH=. pytest --cov=src --cov-report=xml --cov-report=term-missing
+
+# HTMLレポートで詳細確認
+make test-coverage-html
+```
+
+CI/CDパイプラインでは自動的にカバレッジデータがSonarCloudに送信されます。
 
 ## 起動通知機能
 
