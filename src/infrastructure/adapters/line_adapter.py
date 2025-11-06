@@ -1,8 +1,10 @@
 from typing import Optional
+import http.client
 
 from linebot.v3.messaging import MessagingApi
 from linebot.v3.messaging.api_client import ApiClient
 from linebot.v3.messaging.configuration import Configuration
+from urllib3.exceptions import ProtocolError
 
 from ..logger import Logger, create_logger
 
@@ -32,8 +34,15 @@ class LineMessagingAdapter:
 
         try:
             self.messaging_api.reply_message(reply_message_request)
+        except (ProtocolError, http.client.RemoteDisconnected) as e:
+            self.logger.error(
+                f"Connection error when calling messaging_api.reply_message: {type(e).__name__}: {e}"
+            )
+            raise
         except Exception as e:
-            self.logger.error(f"Error when calling messaging_api.reply_message: {e}")
+            self.logger.error(
+                f"Error when calling messaging_api.reply_message: {type(e).__name__}: {e}"
+            )
             raise
 
     def push_message(self, push_message_request):
@@ -47,8 +56,15 @@ class LineMessagingAdapter:
 
         try:
             self.messaging_api.push_message(push_message_request)
+        except (ProtocolError, http.client.RemoteDisconnected) as e:
+            self.logger.error(
+                f"Connection error when calling messaging_api.push_message: {type(e).__name__}: {e}"
+            )
+            raise
         except Exception as e:
-            self.logger.error(f"Error when calling messaging_api.push_message: {e}")
+            self.logger.error(
+                f"Error when calling messaging_api.push_message: {type(e).__name__}: {e}"
+            )
             raise
 
     def get_display_name_from_line_profile(self, user_id: str) -> Optional[str]:
@@ -65,8 +81,15 @@ class LineMessagingAdapter:
         try:
             profile = self.messaging_api.get_profile(user_id)
             return profile.display_name
+        except (ProtocolError, http.client.RemoteDisconnected) as e:
+            self.logger.error(
+                f"Connection error when fetching profile for {user_id}: {type(e).__name__}: {e}"
+            )
+            return None
         except Exception as e:
-            self.logger.error(f"Failed to fetch profile for {user_id}: {e}")
+            self.logger.error(
+                f"Failed to fetch profile for {user_id}: {type(e).__name__}: {e}"
+            )
             return None
 
     def _log_payload(self, request, message_type: str):

@@ -4,7 +4,13 @@ import os
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from openai import APIError, APIConnectionError, AuthenticationError, OpenAI, RateLimitError
+from openai import (
+    APIError,
+    APIConnectionError,
+    AuthenticationError,
+    OpenAI,
+    RateLimitError,
+)
 from promptlayer import PromptLayer
 
 from ..logger import Logger, create_logger
@@ -103,7 +109,9 @@ class OpenAIAdapter:
             self.logger.error(f"OpenAI API error: {type(e).__name__}: {e}")
             raise OpenAIError(f"OpenAI API error ({type(e).__name__}): {str(e)}") from e
         except Exception as e:
-            self.logger.error(f"Unexpected error in OpenAI request: {type(e).__name__}: {e}")
+            self.logger.error(
+                f"Unexpected error in OpenAI request: {type(e).__name__}: {e}"
+            )
             raise OpenAIError(f"Unexpected error: {str(e)}") from e
 
     def track_prompt(
@@ -142,10 +150,14 @@ class OpenAIAdapter:
             )
             return True
         except (AttributeError, TypeError, ValueError) as e:
-            self.logger.warning(f"Failed to track prompt to PromptLayer ({type(e).__name__}): {e}")
+            self.logger.warning(
+                f"Failed to track prompt to PromptLayer ({type(e).__name__}): {e}"
+            )
             return False
         except Exception as e:
-            self.logger.error(f"Unexpected error tracking prompt to PromptLayer ({type(e).__name__}): {e}")
+            self.logger.error(
+                f"Unexpected error tracking prompt to PromptLayer ({type(e).__name__}): {e}"
+            )
             return False
 
     def track_score(
